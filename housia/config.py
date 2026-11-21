@@ -51,5 +51,7 @@ IDEALISTA_INBOX_URL: str = _str("IDEALISTA_INBOX_URL", "http://localhost:5000/mo
 BROWSER_ALLOWED_DOMAINS: list[str] = _list("BROWSER_ALLOWED_DOMAINS", "localhost")
 OPENAI_API_KEY: str | None = _str("OPENAI_API_KEY")
 SECRET_KEY: str = _str("SECRET_KEY", "dev")
+# Optional local demo data loaded after the seed on reset (see housia/demo_extra.py).
+DEMO_EXTRA_FILE: str = _str("DEMO_EXTRA_FILE", "instance/demo_extra.json")
 OWNER_PASSWORD: str | None = _str("OWNER_PASSWORD")
 WORKSPACE_AI_NOTES: bool = _str("WORKSPACE_AI_NOTES", "0") == "1"

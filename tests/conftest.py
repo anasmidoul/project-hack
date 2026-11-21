@@ -17,6 +17,7 @@ def isolated_config(monkeypatch):
     monkeypatch.setattr(config, "SEND_ALLOWLIST", [])
     monkeypatch.setattr(config, "IDEALISTA_INBOX_URL", "http://localhost:5000/mock/inbox")
     monkeypatch.setattr(config, "BASE_URL", "http://localhost:5000")
+    monkeypatch.setattr(config, "DEMO_EXTRA_FILE", "")
 
 
 @pytest.fixture

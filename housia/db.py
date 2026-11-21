@@ -73,7 +73,7 @@ def init_db() -> None:
 
 def reset_db() -> None:
     """Drop every table, create the schema again and load the seed data."""
-    from housia import core, seed  # lazy: seed imports services
+    from housia import core, demo_extra, seed  # lazy: seed imports services
 
     conn = get_conn()
     try:
@@ -95,3 +95,4 @@ def reset_db() -> None:
 
     with tx() as conn:
         seed.run(conn, core.now(conn))
+        demo_extra.load(conn, core.now(conn))
