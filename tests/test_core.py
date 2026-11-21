@@ -230,3 +230,12 @@ def test_make_message_id_is_stable():
 def test_get_channel_unknown():
     with pytest.raises(ValueError):
         get_channel("myspace")
+
+
+def test_browser_use_telemetry_is_forced_off():
+    """Agent results contain personal data; browser-use must never send them as telemetry."""
+    import os
+
+    from housia import config  # noqa: F401  (importing it applies the setting)
+
+    assert os.environ["ANONYMIZED_TELEMETRY"] == "false"

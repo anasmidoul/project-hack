@@ -12,6 +12,11 @@ ROOT = Path(__file__).resolve().parent.parent
 
 load_dotenv(ROOT / ".env")
 
+# browser-use sends usage telemetry to its own servers by default, including the final result
+# of each agent run. Our results hold names and message text of real people, so it is forced
+# off here, before browser-use can be imported. Do not make this configurable.
+os.environ["ANONYMIZED_TELEMETRY"] = "false"
+
 
 def _str(name: str, default: str | None = None) -> str | None:
     value = os.environ.get(name)

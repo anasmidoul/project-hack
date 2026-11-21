@@ -718,6 +718,24 @@ Rules for this unit:
   `ChannelError("contact not on the send allowlist")` and sends nothing. The list is empty by
   default. The mock portal is never restricted.
 - One browser session at a time. The worker is the only caller.
+- **Telemetry is forced off.** `browser-use` sends usage telemetry to its own servers by
+  default, including the final result of each run, which for us is a person's name and
+  message. `housia/config.py` sets `ANONYMIZED_TELEMETRY=false` before `browser-use` can load.
+  Never import `browser_use` before `housia.config`.
+
+Facts from the first real runs (2026-11-21):
+- The inbox is `https://www.idealista.com/conversations`. Conversations are list items with a
+  `data-conversation-id` attribute, not links. Opening one does not change the URL.
+- Logging in inside the window that `browser-use` opens failed at the CAPTCHA. What worked:
+  log in by hand in a plain browser on the same profile, then let the automation reuse it:
+  `chromium-browser --user-data-dir=$HOME/housia-profile --password-store=basic https://www.idealista.com/login`
+  Close that window before running the probe or the worker. `--password-store=basic` matters:
+  `browser-use` starts the browser with it, and cookies saved without it cannot be read back.
+- Use the same browser binary for the manual login and the automation. `BH_CHROME_PATH` in
+  `.env` selects it (default order: Google Chrome, then Chromium).
+- With that profile the automated session loaded the inbox and was not blocked. This can
+  change at any time; the mock inbox stays the fallback.
+- A read-only fetch with `gpt-6.1-terra` took 36 seconds and 9 steps.
 - **Privacy limit.** The model that drives the browser sees the inbox page, so it sees candidate
   names and message text. Rule 7 cannot be met inside this unit. For now this is accepted for
   testing with team accounts only. To close the gap later, read and type with a fixed-selector
