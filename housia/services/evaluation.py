@@ -16,6 +16,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from housia import core
+
 if TYPE_CHECKING:
     import sqlite3
     from datetime import datetime
@@ -47,7 +49,42 @@ def rank(conn: sqlite3.Connection, property_id: int, now: datetime) -> list[Prop
     core.time_band(starts_at) is in the applicant's availability. Higher first.
     Tie-break: earlier created_at.
     """
-    raise NotImplementedError("B3: evaluation.rank")
+    prop = conn.execute("SELECT id FROM properties WHERE id = ?", (property_id,)).fetchone()
+    if prop is None:
+        raise core.DomainError("Property not found.")
+    candidates = conn.execute(
+        "SELECT id, name, availability, created_at FROM applications "
+        "WHERE property_id = ? AND status = 'docs_approved' ORDER BY created_at, id",
+        (property_id,),
+    ).fetchall()
+    application_order = {
+        row["id"]: index for index, row in enumerate(conn.execute(
+            "SELECT id FROM applications WHERE property_id=? ORDER BY created_at,id", (property_id,)
+        ).fetchall(), 1)
+    }
+    slots = conn.execute(
+        "SELECT starts_at FROM slots WHERE property_id = ? AND starts_at > ? "
+        "AND booked_application_id IS NULL AND offer_application_id IS NULL ORDER BY starts_at",
+        (property_id, now.replace(microsecond=0).isoformat()),
+    ).fetchall()
+    bands = [core.time_band(slot["starts_at"]) for slot in slots]
+    proposals = []
+    for row in candidates:
+        availability = {value.strip() for value in (row["availability"] or "").split(",") if value.strip()}
+        score = sum(band in availability for band in bands)
+        proposals.append((row, score))
+    proposals.sort(key=lambda item: (-item[1], item[0]["created_at"], item[0]["id"]))
+    total = len(slots)
+    result = []
+    for position, (row, score) in enumerate(proposals, 1):
+        applied = application_order[row["id"]]
+        applied_ordinal = "th" if 10 <= applied % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(applied % 10, "th")
+        result.append(Proposal(
+            application_id=row["id"], name=row["name"], position=position,
+            score=score, total_slots=total,
+            explanation=f"Can attend {score} of {total} open slots. Applied {applied}{applied_ordinal}.",
+        ))
+    return result
 
 
 def evaluate(conn: sqlite3.Connection, property_id: int, now: datetime) -> EvaluationResult:
@@ -56,7 +93,20 @@ def evaluate(conn: sqlite3.Connection, property_id: int, now: datetime) -> Evalu
     In assisted mode it changes nothing. In automatic mode it calls
     core.grant_calendar_access(..., invited_by='auto') for the top `remaining` proposals.
     """
-    raise NotImplementedError("B3: evaluation.evaluate")
+    prop = conn.execute("SELECT eval_mode, invite_limit FROM properties WHERE id = ?", (property_id,)).fetchone()
+    if prop is None:
+        raise core.DomainError("Property not found.")
+    proposals = rank(conn, property_id, now)
+    remaining = max(0, prop["invite_limit"] - core.invited_count(conn, property_id))
+    invited_ids = []
+    left_out_ids = []
+    if prop["eval_mode"] == "automatic":
+        eligible = [proposal.application_id for proposal in proposals]
+        invited_ids = eligible[:remaining]
+        left_out_ids = eligible[remaining:]
+        for application_id in invited_ids:
+            core.grant_calendar_access(conn, application_id, "auto", now)
+    return EvaluationResult(prop["eval_mode"], proposals, remaining, invited_ids, left_out_ids)
 
 
 def invite(conn: sqlite3.Connection, property_id: int, application_ids: list[int],
@@ -65,4 +115,20 @@ def invite(conn: sqlite3.Connection, property_id: int, application_ids: list[int
 
     Raises DomainError if the selection exceeds `remaining`.
     """
-    raise NotImplementedError("B3: evaluation.invite")
+    prop = conn.execute("SELECT eval_mode FROM properties WHERE id = ?", (property_id,)).fetchone()
+    if prop is None:
+        raise core.DomainError("Property not found.")
+    if prop["eval_mode"] != "assisted":
+        raise core.DomainError("Manual invitations are only available in assisted mode.")
+    if len(set(application_ids)) != len(application_ids):
+        raise core.DomainError("An applicant can only be selected once.")
+    ranked_ids = {proposal.application_id for proposal in rank(conn, property_id, now)}
+    if any(application_id not in ranked_ids for application_id in application_ids):
+        raise core.DomainError("Only eligible applicants for this property can be invited.")
+    remaining = max(0, conn.execute(
+        "SELECT invite_limit FROM properties WHERE id = ?", (property_id,)
+    ).fetchone()[0] - core.invited_count(conn, property_id))
+    if len(application_ids) > remaining:
+        raise core.DomainError(f"Only {remaining} invitation(s) remain for this property.")
+    for application_id in application_ids:
+        core.grant_calendar_access(conn, application_id, "landlord", now)
