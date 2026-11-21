@@ -1,16 +1,3 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mock portal - Candidate</title>
-</head>
-<body>
-<h1>Mock portal - Candidate</h1>
-<p>Placeholder page. Template unit: C6. Standalone document, does not extend base.html.</p>
-<p>Context variables:</p>
-<ul>
-  <li>threads</li>
-</ul>
-</body>
-</html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Send test enquiry · homefind</title><link rel="stylesheet" href="/static/style.css"></head>
+<body class="portal-shell portal-shell--candidate"><header class="portal-header"><a href="/mock/inbox" class="portal-brand"><span>◈</span> homefind</a><nav><a href="/mock/inbox">Landlord messages</a><a class="is-active" href="/mock/candidate">Candidate view</a></nav></header><main class="candidate-main"><a class="portal-back" href="/mock/inbox">← Back to landlord inbox</a><div class="candidate-card"><div class="portal-listing-image"><span>Sunny apartment<br>near Retiro</span></div><div class="candidate-card__body"><p class="portal-kicker">2 bedroom apartment · Madrid</p><h1>Send an enquiry</h1><p>This is a test version of a listing portal. Your message will appear in the mock inbox and be picked up by HOUSIA.</p><form method="post" action="/mock/candidate/send"><div class="form-field"><label for="thread_id">Continue an existing thread</label><select id="thread_id" name="thread_id"><option value="">Start a new conversation</option>{% for thread in threads %}<option value="{{ thread.id }}">{{ thread.contact_name }}</option>{% endfor %}</select></div><div class="form-field"><label for="contact_name">Your name</label><input class="input" id="contact_name" name="contact_name" required placeholder="e.g. Jamie Rivera"></div><div class="form-field"><label for="candidate-body">Your message</label><textarea id="candidate-body" name="body" required placeholder="Hello, I’m interested in this apartment…"></textarea></div><button type="submit" class="portal-send">Send enquiry</button></form></div></div></main></body></html>

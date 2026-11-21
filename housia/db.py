@@ -7,6 +7,7 @@ from pathlib import Path
 from housia import config
 
 SCHEMA_PATH = Path(__file__).resolve().parent / "schema.sql"
+WORKSPACE_SCHEMA = SCHEMA_PATH.with_name("workspace.sql")
 
 
 def db_path() -> Path:
@@ -52,6 +53,7 @@ def tx():
 def apply_schema(conn: sqlite3.Connection) -> None:
     """Run schema.sql on a connection that has no tables yet."""
     conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
+    conn.executescript(WORKSPACE_SCHEMA.read_text(encoding="utf-8"))
 
 
 def init_db() -> None:
@@ -63,6 +65,8 @@ def init_db() -> None:
         ).fetchone()
         if not exists:
             apply_schema(conn)
+        else:
+            conn.executescript(WORKSPACE_SCHEMA.read_text(encoding="utf-8"))
     finally:
         conn.close()
 

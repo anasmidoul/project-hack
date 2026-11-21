@@ -1,16 +1,3 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mock portal - Inbox</title>
-</head>
-<body>
-<h1>Mock portal - Inbox</h1>
-<p>Placeholder page. Template unit: C6. Standalone document, does not extend base.html.</p>
-<p>Context variables:</p>
-<ul>
-  <li>threads</li>
-</ul>
-</body>
-</html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Messages · Listing Portal</title><link rel="stylesheet" href="/static/style.css"></head>
+<body class="portal-shell"><header class="portal-header"><a href="/mock/inbox" class="portal-brand"><span>◈</span> homefind</a><nav><a href="#">My listings</a><a class="is-active" href="/mock/inbox">Messages</a><a href="/mock/candidate">Candidate view</a></nav><span class="portal-user">Alex M. ▾</span></header><main class="portal-main"><div class="portal-title"><div><p>Messages</p><h1>Your enquiries</h1></div><a class="button button--secondary" href="/mock/candidate">+ New test message</a></div><section class="portal-layout"><aside class="portal-threads"><div class="portal-search">⌕ <span>Search messages</span></div>{% for thread in threads %}<a href="/mock/inbox/{{ thread.id }}" class="portal-thread"><span class="portal-avatar">{{ thread.contact_name[:1]|upper }}</span><span><strong>{{ thread.contact_name }}</strong><small>{{ thread.last_message or 'Start a conversation' }}</small></span>{% if thread.unanswered %}<b>New</b>{% endif %}</a>{% else %}<p class="portal-empty">No messages yet.</p>{% endfor %}</aside><section class="portal-welcome"><span>✉</span><h2>Select a conversation</h2><p>Choose a message from the list to read and reply.</p></section></section></main></body></html>

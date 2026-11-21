@@ -1,13 +1,110 @@
-{% extends "base.html" %}
-{% block title %}Property{% endblock %}
+{% extends 'base.html' %}
+{% from '_macros.html' import empty_state %}
+{% block title %}{{ property.title }} · HOUSIA{% endblock %}
+{% block breadcrumb %}<a class="crumb" href="/">Workspace</a><span class="crumb"> / </span><strong>{{ property.title }}</strong>{% endblock %}
+{% block head %}<script defer src="{{ url_for('static', filename='workspace.js') }}"></script>{% endblock %}
 {% block content %}
-<h1>Property</h1>
-<p>Placeholder page. Template unit: C2.</p>
-<p>Context variables:</p>
-<ul>
-  <li>property</li>
-  <li>stats</li>
-  <li>public_link</li>
-  <li>copy_messages</li>
-</ul>
+{% set id = property.id %}
+{% set undecided = people|rejectattr('decision')|list %}
+{% set ready = undecided|selectattr('document_received')|list %}
+{% set booked = slots|selectattr('booked_application_id')|list %}
+{% set counts = [people|length ~ ' imported', ready|length ~ ' to review', (people|length - undecided|length) ~ ' decisions recorded', booked|length ~ ' booked'] %}
+<section class="page-heading workspace-heading">
+  <div><div class="eyebrow">Rental workspace</div><h1>{{ property.title }}</h1><p>{{ property.address }}, {{ property.city }} <span aria-hidden="true">·</span> €{{ '{:,}'.format(property.rent_eur) }} / month</p></div>
+  <a class="button button--secondary" href="{{ url_for('properties.form', property_id=id) }}">Edit property</a>
+</section>
+<nav class="workspace-steps" aria-label="Rental workflow">
+  {% for key, label in steps.items() %}
+  <a href="{{ url_for('properties.detail', property_id=id, step=key) }}" {% if step == key %}aria-current="step"{% endif %}>
+    <span class="workspace-step-number">{{ loop.index }}</span><span><strong>{{ label }}</strong><small>{{ counts[loop.index0] }}</small></span>
+  </a>
+  {% endfor %}
+</nav>
+
+{% if step == 'import' %}
+<section class="workspace-hero"><span class="eyebrow">01 / Applicant intake</span><h2>Bring your enquiries together.</h2><p>Already published your home elsewhere? Import your contacts here and keep each enquiry linked to the channel it came from.</p></section>
+<div class="workspace-channels" aria-label="Choose a source">
+  {% for key, channel in channels.items() %}
+  <a class="card source-tile {% if selected_channel == key %}is-selected{% endif %}" href="{{ url_for('properties.detail', property_id=id, step='import', channel=key, _anchor='upload') }}" {% if selected_channel == key %}aria-current="true"{% endif %}>
+    <span class="source-icon source-icon--{{ key }}" aria-hidden="true">{{ channel[0][0] }}</span>
+    <span><strong>{{ channel[0] }}</strong><small>CSV import</small></span><span class="source-arrow" aria-hidden="true">→</span>
+  </a>
+  {% endfor %}
+</div>
+{% if selected_channel in channels %}
+<form class="card workspace-panel stack" id="upload" action="{{ url_for('workspace.import_leads', property_id=id) }}" method="post" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="channel" value="{{ selected_channel }}">
+  <div><h2>Import from {{ channels[selected_channel][0] }}</h2><p class="muted">Use the template to format your export. {% if selected_channel == 'whatsapp' %}Use international phone numbers in <code>thread_ref</code>.{% else %}Use the original conversation ID or reference in <code>thread_ref</code>.{% endif %} Duplicate threads are skipped.</p></div>
+  <a class="workspace-link" href="{{ url_for('workspace.sample', channel=selected_channel) }}">Download CSV template ↓</a>
+  <div class="form-field"><label for="enquiries">Enquiries CSV</label><input class="input" id="enquiries" name="enquiries" type="file" accept=".csv,text/csv" required></div>
+  <div><button class="button button--primary">Import enquiries</button></div>
+</form>
+{% elif not people %}
+<p class="workspace-hint">Choose a source to download the template and upload your CSV. Repeat for each channel you use.</p>
+{% endif %}
+{% if people %}
+<section class="card workspace-panel">
+  <div class="workspace-title"><div><h2>Imported enquiries</h2><p class="muted">{{ people|length }} applicants across your channels.</p></div><a class="button button--primary" href="{{ url_for('properties.detail', property_id=id, step='screen') }}">Next: Screening →</a></div>
+  <div class="table-wrap"><table class="data-table"><thead><tr><th>Applicant</th><th>Original channel</th><th>Thread reference</th></tr></thead><tbody>
+  {% for person in people %}<tr><td><strong>{{ person.name }}</strong></td><td><span class="channel-pill channel-pill--{{ person.channel }}">{{ person.channel_name }}</span></td><td>{{ person.thread_ref }}</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% endif %}
+
+{% elif step == 'screen' %}
+<section class="workspace-hero"><span class="eyebrow">02 / Private screening</span><h2>Screen against your brief.</h2><p>HOUSIA checks readable payslips for monthly net pay on this server. Unclear results are flagged for review, not rejected. You make the final decision.</p></section>
+<form class="card workspace-panel stack" action="{{ url_for('workspace.save_brief', property_id=id) }}" method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div><h2>Screening brief</h2><p class="muted">Required: latest monthly payslip (PDF). The automated check does not verify authenticity or pay frequency.</p></div>
+  <div class="workspace-inline"><div class="form-field"><label for="min_net_eur">Minimum monthly net income (€)</label><input class="input" type="number" min="0" max="1000000" id="min_net_eur" name="min_net_eur" value="{{ minimum }}" required></div><button class="button button--primary">Save brief</button></div>
+</form>
+<section class="card workspace-panel">
+  <div class="workspace-title"><div><h2>Screening results</h2><p class="muted">{{ ready|length }} ready to review · {{ undecided|length - ready|length }} awaiting a document</p></div><a class="button button--secondary" href="{{ url_for('properties.detail', property_id=id, step='reply') }}">Open replies →</a></div>
+  {% set shown = undecided if result_filter == 'all' else undecided|selectattr('result', 'equalto', result_filter)|list %}
+  {% if undecided %}<nav aria-label="Filter screening results" class="inline-actions workspace-filters">{% for key, label in [('all', 'All'), ('match', 'Matches brief'), ('review', 'Needs review'), ('below', 'Below minimum'), ('missing', 'Awaiting document')] %}<a class="button button--secondary" {% if result_filter == key %}aria-current="true"{% endif %} href="{{ url_for('properties.detail', property_id=id, step='screen', result=key) }}">{{ label }}</a>{% endfor %}</nav>{% endif %}
+  {% if shown %}<div class="table-wrap"><table class="data-table"><thead><tr><th>Applicant</th><th>Channel</th><th>Check result</th>{% if ai_enabled %}<th>Explanation</th>{% endif %}</tr></thead><tbody>
+  {% for person in shown %}<tr><td><strong>{{ person.name }}</strong></td><td><span class="channel-pill channel-pill--{{ person.channel }}">{{ person.channel_name }}</span></td><td><span class="review-state review-state--{{ person.result }}">{{ person.evidence }}</span></td>
+  {% if ai_enabled %}<td>{% if person.document_received %}<form method="post" action="{{ url_for('workspace.explain', property_id=id, app_id=person.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button button--quiet">Explain with AI</button></form>{% endif %}</td>{% endif %}</tr>{% endfor %}
+  </tbody></table></div>{% elif undecided %}{{ empty_state('No results in this filter', 'Choose another screening result to see more applicants.') }}{% else %}{{ empty_state('No applications to screen', 'New enquiries appear here after import.') }}{% endif %}
+</section>
+
+{% elif step == 'reply' %}
+<section class="workspace-hero"><span class="eyebrow">03 / Same-channel replies</span><h2>Keep the conversation where it started.</h2><p>Copy a personal draft, send it in the original thread, then mark the decision as sent here. Confirming an invitation activates the applicant’s private viewing link.</p></section>
+<div class="stack">
+{% for person in people %}
+<details class="card applicant-row" {% if people|length == 1 %}open{% endif %}>
+  <summary><span class="source-icon source-icon--{{ person.channel }}" aria-hidden="true">{{ person.name[0]|upper }}</span><span><strong>{{ person.name }}</strong><small>{{ person.channel_name }} · {{ person.thread_ref }}</small></span><span class="review-state">{% if person.decision == 'invite' %}Invitation recorded{% elif person.decision == 'decline' %}Decline recorded{% else %}{{ person.evidence }}{% endif %}</span><span aria-hidden="true">⌄</span></summary>
+  {% if not person.decision %}
+  <div class="card__body stack">
+    <div><a class="workspace-link" href="{{ person.channel_url }}" target="_blank" rel="noopener noreferrer">Open {{ person.channel_name }} ↗</a></div>
+    <div class="workspace-drafts">
+    {% for choice, label in [('request', 'Request a payslip'), ('invite', 'Invite to a viewing'), ('decline', 'Decline application')] %}
+      {% if (choice == 'request' and not person.document_received) or (choice == 'invite' and person.document_received) or choice == 'decline' %}
+      <div class="workspace-draft"><label for="draft-{{ person.id }}-{{ choice }}">{{ label }}</label><textarea id="draft-{{ person.id }}-{{ choice }}" rows="4" readonly>{{ person.drafts[choice] }}</textarea>
+      <div class="inline-actions"><button type="button" class="button button--secondary" data-copy="draft-{{ person.id }}-{{ choice }}">Copy draft</button>
+      {% if choice != 'request' %}<form method="post" action="{{ url_for('workspace.decision', property_id=id, app_id=person.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button button--quiet" name="decision" value="{{ choice }}">Mark {{ 'invitation' if choice == 'invite' else 'decline' }} as sent</button></form>{% endif %}</div>
+      </div>
+      {% endif %}
+    {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</details>
+{% else %}{{ empty_state('No replies to prepare', 'Import enquiries to generate message drafts for each applicant.') }}{% endfor %}
+</div>
+
+{% else %}
+<section class="workspace-hero"><span class="eyebrow">04 / HOUSIA agenda</span><h2>Make room for viewings.</h2><p>Add available times. Invited applicants can book or cancel from their private link; changes appear in your agenda and notifications immediately.</p></section>
+<form class="card workspace-panel stack" method="post" action="{{ url_for('workspace.add_slot', property_id=id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div><h2>Add availability</h2><p class="muted">Use the agenda’s local time.</p></div>
+  <div class="workspace-inline"><div class="form-field"><label for="starts_at">Date and time</label><input class="input" id="starts_at" name="starts_at" type="datetime-local" required></div><div class="form-field"><label for="duration_min">Duration (minutes)</label><input class="input" id="duration_min" name="duration_min" type="number" min="10" max="180" value="30" required></div><button class="button button--primary">Add slot</button></div>
+</form>
+<section class="card workspace-panel">
+  <div class="workspace-title"><div><h2>Upcoming viewings</h2><p class="muted">{{ booked|length }} confirmed · {{ slots|length - booked|length }} open or held</p></div><a class="button button--secondary" href="/inbox">Notifications →</a></div>
+  {% if slots %}<div class="table-wrap"><table class="data-table"><thead><tr><th>Start</th><th>Duration</th><th>Applicant</th><th></th></tr></thead><tbody>
+    {% for slot in slots %}<tr><td><strong>{{ slot.starts_at|dt }}</strong></td><td>{{ slot.duration_min }} min</td><td>{{ slot.name or ('Held' if slot.offer_application_id else 'Available') }}</td><td>{% if not slot.name and not slot.offer_application_id %}<form method="post" action="{{ url_for('workspace.remove_slot', property_id=id, slot_id=slot.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="button button--quiet">Remove slot</button></form>{% endif %}</td></tr>{% endfor %}
+  </tbody></table></div>{% else %}{{ empty_state('No upcoming viewings', 'Add your first slot so invited applicants can choose a time.') }}{% endif %}
+</section>
+{% endif %}
 {% endblock %}

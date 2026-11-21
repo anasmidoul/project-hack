@@ -1,11 +1,22 @@
-{% extends "base.html" %}
-{% block title %}Applications{% endblock %}
+{% extends 'base.html' %}
+{% from '_macros.html' import button, property_tabs, status_badge, empty_state %}
+{% block title %}Applications · {{ property.title if property else 'Property' }} · HOUSIA{% endblock %}
+{% block breadcrumb %}<span class="crumb">Properties / {{ property.title if property else 'Property' }} / <strong>Applications</strong></span>{% endblock %}
 {% block content %}
-<h1>Applications</h1>
-<p>Placeholder page. Template unit: C3.</p>
-<p>Context variables:</p>
-<ul>
-  <li>property</li>
-  <li>applications</li>
-</ul>
+  {% if property %}
+  <section class="page-heading"><div><div class="eyebrow">{{ property.title }}</div><h1>Applications & screening</h1><p>Review private document checks, then decide who moves forward.</p></div><div class="inline-actions">{{ button('Application link ↗', 'secondary', href='/apply/' ~ property.id) }}<a class="button button--primary" href="#phone-enquiry">+ Add enquiry</a></div></section>
+  {{ property_tabs(property, 'applications') }}
+  <section class="screening-overview"><div><span class="simulation-badge">✦ Private AI review</span><h2>Screen every applicant against your requirements.</h2><p>HOUSIA reads the submitted document privately, highlights what matches or is missing, and never makes the final decision for you.</p></div><div class="screening-overview__facts"><span><small>Required document</small><strong>{{ property.required_document }}</strong></span><span><small>Review decisions</small><strong>Always yours</strong></span></div><button class="button button--secondary" type="button">Configure screening</button></section>
+  <section class="card">
+    <div class="card__header"><div><h2>All applicants</h2><small>Once you decide, HOUSIA prepares a concise acceptance or rejection message for the same channel.</small></div><span class="badge">{{ applications|length }} total</span></div>
+    {% if applications %}
+      <div class="table-wrap"><table class="data-table"><thead><tr><th>Applicant</th><th class="hide-mobile">Channel</th><th class="hide-mobile">AI review</th><th>Status</th><th class="hide-mobile">Applied</th><th></th></tr></thead><tbody>
+        {% for applicant in applications %}<tr><td><a class="person-cell" href="/applications/{{ applicant.id }}"><span class="avatar avatar--table {% if loop.index % 3 == 0 %}avatar--blue{% elif loop.index % 2 == 0 %}avatar--green{% endif %}">{{ applicant.name[:2]|upper }}</span><span><strong>{{ applicant.name }}</strong><small>{{ applicant.email }}</small></span></a></td><td class="hide-mobile"><span class="channel-pill channel-pill--{{ applicant.source }}">{{ applicant.source|title }}</span></td><td class="hide-mobile">{% if applicant.status in ['docs_approved','invited','booked','attended','finalist','completed'] %}<span class="review-state review-state--match">Matches brief</span>{% elif applicant.status == 'docs_uploaded' %}<span class="review-state review-state--review">Ready to review</span>{% elif applicant.status in ['docs_correction','closed'] %}<span class="review-state review-state--missing">Needs attention</span>{% else %}<span class="review-state">Waiting for document</span>{% endif %}</td><td>{{ status_badge(applicant.status) }}</td><td class="hide-mobile"><span class="muted">{{ applicant.created_at }}</span></td><td><a class="button button--quiet" href="/applications/{{ applicant.id }}">Review →</a></td></tr>{% endfor %}
+      </tbody></table></div>
+    {% else %}{{ empty_state('No applications yet', 'Share the public application link or add somebody you spoke with by phone.') }}{% endif %}
+  </section>
+  <details id="phone-enquiry" class="disclosure-card"><summary><span><strong>Add a phone enquiry</strong><small>Create an application for someone who contacted you directly.</small></span><b>+</b></summary><form method="post" action="/properties/{{ property.id }}/applications" class="card"><div class="card__body"><div class="form-grid"><div class="form-field"><label>Name *</label><input class="input" required name="name"></div><div class="form-field"><label>Email</label><input class="input" type="email" name="email"></div><div class="form-field"><label>Phone</label><input class="input" name="phone"></div><div class="form-field"><label>Preferences</label><input class="input" name="preferences" placeholder="e.g. Move-in date"></div><fieldset class="form-field form-field--full"><legend class="field-label">Viewing availability</legend><div class="choice-row"><label class="choice"><input type="checkbox" name="availability" value="morning"><span>Weekday mornings</span></label><label class="choice"><input type="checkbox" name="availability" value="afternoon"><span>Weekday afternoons</span></label><label class="choice"><input type="checkbox" name="availability" value="weekend"><span>Weekends</span></label></div></fieldset></div><div class="form-actions">{{ button('Add enquiry', 'primary', type='submit') }}</div></div></form></details>
+  {% else %}
+    <section class="page-heading"><div><div class="eyebrow">Applications</div><h1>Property not found</h1><p>Choose a property from your dashboard to see its applications.</p></div>{{ button('Go to dashboard', 'secondary', href='/') }}</section>
+  {% endif %}
 {% endblock %}

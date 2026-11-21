@@ -1,12 +1,39 @@
-{% extends "base.html" %}
-{% block title %}Dashboard{% endblock %}
+{% extends 'base.html' %}
+{% from '_macros.html' import empty_state %}
+{% block title %}Dashboard · HOUSIA{% endblock %}
 {% block content %}
-<h1>Dashboard</h1>
-<p>Placeholder page. Template unit: C2.</p>
-<p>Context variables:</p>
-<ul>
-  <li>properties</li>
-  <li>upcoming_viewings</li>
-  <li>activity</li>
-</ul>
+<section class="page-heading workspace-heading">
+  <div><div class="eyebrow">Owner workspace</div><h1>Your rentals.</h1><p>Manage enquiries, replies and viewings for the homes you’ve already listed.</p></div>
+  <a class="button button--primary" href="{{ url_for('properties.form') }}">+ Add property</a>
+</section>
+{% set totals = namespace(enquiries=0, review=0) %}
+{% for prop in properties %}{% set totals.enquiries = totals.enquiries + prop.enquiries %}{% set totals.review = totals.review + prop.to_review %}{% endfor %}
+<section class="stat-grid workspace-stats" aria-label="Portfolio overview">
+  {% for value, label in [(properties|length, 'Properties'), (totals.enquiries, 'Imported enquiries'), (totals.review, 'Ready for review'), (upcoming_viewings|length, 'Viewings in 14 days')] %}
+  <article class="stat-card"><strong class="stat-card__value">{{ value }}</strong><span class="stat-card__label">{{ label }}</span></article>
+  {% endfor %}
+</section>
+<section class="section-heading"><div><h2>Properties</h2><p>Pick a property to continue its workflow.</p></div></section>
+{% if properties %}
+<div class="three-up">
+  {% for prop in properties %}
+  <article class="card workspace-property">
+    <div class="card__body"><span class="workspace-property-icon" aria-hidden="true">⌂</span><h3>{{ prop.title }}</h3><p class="muted">{{ prop.address }}, {{ prop.city }}</p><p><strong>€{{ '{:,}'.format(prop.rent_eur) }}</strong> <span class="muted">/ month</span></p></div>
+    <div class="card__footer"><small>{{ prop.enquiries }} enquiries · {{ prop.to_review }} to review</small><a class="workspace-link" href="{{ url_for('properties.detail', property_id=prop.id) }}">Open workspace →</a></div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<section class="workspace-hero workspace-hero--start"><span class="eyebrow">From enquiry to viewing</span><h2>Start with a listing you’ve already published.</h2><p>Import contacts from Idealista, Fotocasa or WhatsApp. Review payslips privately, reply on the same channel and manage viewings in one agenda.</p><a class="button button--primary" href="{{ url_for('properties.form') }}">Set up your first property</a></section>
+{% endif %}
+<div class="split-grid workspace-bottom">
+  <section class="card workspace-panel"><h2>Upcoming viewings</h2>
+    {% if upcoming_viewings %}<ul class="workspace-events">{% for viewing in upcoming_viewings %}<li><div><strong>{{ viewing.applicant_name }}</strong><small>{{ viewing.property_title }}</small></div><a class="workspace-link" href="{{ url_for('properties.detail', property_id=viewing.property_id, step='agenda') }}">{{ viewing.starts_at|dt }}</a></li>{% endfor %}</ul>
+    {% else %}{{ empty_state('Nothing booked yet', 'Confirmed appointments will appear here.') }}{% endif %}
+  </section>
+  <section class="card workspace-panel"><div class="workspace-title"><h2>Recent activity</h2><a class="workspace-link" href="/inbox">All notifications →</a></div>
+    {% if activity %}<ul class="workspace-events">{% for note in activity %}<li><div><strong>{{ note.title }}</strong><small>{{ note.body }}</small></div></li>{% endfor %}</ul>
+    {% else %}{{ empty_state('All caught up', 'Booking and cancellation updates will appear here.') }}{% endif %}
+  </section>
+</div>
 {% endblock %}

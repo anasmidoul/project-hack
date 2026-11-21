@@ -1,0 +1,25 @@
+{% extends 'base_mobile.html' %}
+{% block title %}Your application · HOUSIA{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='workspace.css') }}">{% endblock %}
+{% block content %}
+<section class="mobile-hero"><div class="eyebrow">Your application</div><h1>{{ property.title }}</h1><p>{{ property.city }} · Hi {{ person.name.split()[0] }}.</p></section>
+<section class="mobile-card workspace-candidate">
+{% if booked %}
+  <h2>Viewing confirmed</h2><p><strong>{{ booked.starts_at|dt }}</strong> · {{ booked.duration_min }} minutes</p><p class="muted">{{ property.address }}, {{ property.city }}</p>
+  {% if booked.starts_at > now.isoformat() %}<form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="slot_id" value="{{ booked.id }}"><button class="button button--danger" name="action" value="cancel">Cancel viewing</button></form>{% endif %}
+{% elif person.calendar_access %}
+  <h2>Choose a viewing time</h2><p class="muted">Times are shown in the owner’s local time.</p>
+  <div class="mobile-slot-list">
+  {% for slot in slots %}<div class="mobile-slot"><span><strong>{{ slot.starts_at|dt }}</strong><small>{{ slot.duration_min }} minutes</small></span><form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="slot_id" value="{{ slot.id }}"><button class="button button--primary" name="action" value="book">Book</button></form></div>
+  {% else %}<p class="muted">No times are available yet. Please check this link again later.</p>{% endfor %}
+  </div>
+{% elif person.status == 'closed' %}
+  <h2>This application is closed</h2><p class="muted">Thanks for your interest in this property.</p>
+{% else %}
+  <h2>{{ 'Payslip received' if person.status == 'docs_uploaded' else 'Share your latest payslip' }}</h2>
+  <p class="muted">{% if person.status == 'docs_uploaded' %}The owner will be in touch on the channel you originally used. You can replace the PDF while it’s under review.{% else %}Upload a readable PDF of your latest monthly payslip. Use a text-based PDF rather than a photo or a scan.{% endif %}</p>
+  <form method="post" enctype="multipart/form-data" class="stack"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><div class="form-field"><label for="document">Payslip PDF (max. 2 MB)</label><input type="file" class="input" id="document" name="document" accept=".pdf,application/pdf" required></div><button class="button button--primary" name="action" value="upload">{{ 'Replace payslip' if person.status == 'docs_uploaded' else 'Upload payslip' }}</button></form>
+  <small class="workspace-upload-note">HOUSIA checks the PDF on its server and does not keep the file. Keep this link private.</small>
+{% endif %}
+</section>
+{% endblock %}

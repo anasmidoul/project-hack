@@ -1,10 +1,19 @@
-{% extends "base.html" %}
-{% block title %}Property form{% endblock %}
+{% extends 'base.html' %}
+{% block title %}{{ 'Edit ' ~ property.title if property else 'New property' }} · HOUSIA{% endblock %}
+{% block breadcrumb %}<a class="crumb" href="/">Workspace</a><span class="crumb"> / Property setup</span>{% endblock %}
 {% block content %}
-<h1>Property form</h1>
-<p>Placeholder page. Template unit: C2.</p>
-<p>Context variables:</p>
-<ul>
-  <li>property</li>
-</ul>
+<section class="page-heading workspace-heading"><div><div class="eyebrow">Property setup</div><h1>{{ 'Edit property' if property else 'Add a property' }}</h1><p>Set up a workspace for a home you’ve already listed elsewhere. This will not publish a listing.</p></div></section>
+<form class="card workspace-panel" method="post" action="{{ url_for('properties.save', property_id=property.id if property else none) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="form-grid">
+    <div class="form-field form-field--full"><label for="title">Listing title</label><input class="input" id="title" name="title" maxlength="150" required value="{{ property.title if property else '' }}" placeholder="e.g. Two-bedroom flat near Retiro"></div>
+    <div class="form-field"><label for="address">Address</label><input class="input" id="address" name="address" maxlength="150" required value="{{ property.address if property else '' }}"></div>
+    <div class="form-field"><label for="city">City</label><input class="input" id="city" name="city" maxlength="150" required value="{{ property.city if property else '' }}"></div>
+    <div class="form-field"><label for="rental_type">Rental type</label><select id="rental_type" name="rental_type"><option value="residential">Residential rental</option><option value="temporary" {% if property and property.rental_type == 'temporary' %}selected{% endif %}>Temporary rental</option></select></div>
+    <div class="form-field"><label for="rent_eur">Monthly rent (€)</label><input class="input" type="number" min="1" max="1000000" id="rent_eur" name="rent_eur" required value="{{ property.rent_eur if property else '' }}"></div>
+    <div class="form-field"><label for="listing_ref">External listing link or reference (optional)</label><input class="input" id="listing_ref" name="listing_ref" maxlength="300" value="{{ property.listing_ref or '' if property else '' }}"></div>
+    <div class="form-field"><label for="invite_limit">Maximum viewing invitations</label><input class="input" type="number" min="1" max="500" id="invite_limit" name="invite_limit" value="{{ property.invite_limit if property else 10 }}" required></div>
+  </div>
+  <div class="form-actions"><a class="button button--quiet" href="{{ url_for('properties.detail', property_id=property.id) if property else '/' }}">Cancel</a><button class="button button--primary">{{ 'Save changes' if property else 'Create workspace' }}</button></div>
+</form>
 {% endblock %}

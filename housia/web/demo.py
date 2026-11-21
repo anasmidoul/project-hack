@@ -5,16 +5,18 @@ Contract: DESIGN.md section 9.
 
 from flask import Blueprint, flash, redirect, render_template
 
+from housia import db
+
 bp = Blueprint("demo", __name__)
 
 
 @bp.get("/inbox")
 def inbox():
-    # TODO(B7): context = notifications
-    return render_template(
-        "inbox.html",
-        notifications=[],
-    )
+    with db.tx() as conn:
+        notifications = conn.execute(
+            'SELECT * FROM notifications WHERE application_id IS NULL ORDER BY id DESC LIMIT 100'
+        ).fetchall()
+    return render_template('inbox.html', notifications=notifications)
 
 
 @bp.get("/demo")
@@ -29,8 +31,8 @@ def page():
 
 @bp.post("/inbox/read-all")
 def read_all():
-    # TODO(B7): form fields = none
-    flash("Not implemented yet (B7).", "error")
+    with db.tx() as conn:
+        conn.execute('UPDATE notifications SET is_read = 1 WHERE application_id IS NULL')
     return redirect("/inbox")
 
 

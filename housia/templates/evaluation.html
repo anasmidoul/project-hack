@@ -1,14 +1,19 @@
-{% extends "base.html" %}
-{% block title %}Evaluation{% endblock %}
+{% extends 'base.html' %}
+{% from '_macros.html' import button, property_tabs, status_badge, simulation_badge, empty_state %}
+{% block title %}Evaluation · {{ property.title if property else 'Property' }} · HOUSIA{% endblock %}
+{% block breadcrumb %}<span class="crumb">Properties / {{ property.title if property else 'Property' }} / <strong>Evaluation</strong></span>{% endblock %}
 {% block content %}
-<h1>Evaluation</h1>
-<p>Placeholder page. Template unit: C3.</p>
-<p>Context variables:</p>
-<ul>
-  <li>property</li>
-  <li>eligible_count</li>
-  <li>remaining</li>
-  <li>result</li>
-  <li>applications_by_id</li>
-</ul>
+  {% if property %}
+  <section class="page-heading"><div><div class="eyebrow">{{ property.title }}</div><h1>Viewing evaluation</h1><p>Rank document-approved applicants against your available viewing slots.</p></div><div class="inline-actions">{{ simulation_badge() }}<form method="post" action="/properties/{{ property.id }}/evaluation">{{ button('Run evaluation', 'primary', type='submit') }}</form></div></section>
+  {{ property_tabs(property, 'evaluation') }}
+  <section class="three-up"><article class="stat-card"><span class="stat-card__label">Eligible applicants</span><strong class="stat-card__value">{{ eligible_count }}</strong><span class="stat-card__note">documents approved</span></article><article class="stat-card stat-card--accent"><span class="stat-card__label">Places remaining</span><strong class="stat-card__value">{{ remaining }}</strong><span class="stat-card__note">of {{ property.invite_limit }} invitations</span></article><article class="stat-card stat-card--purple"><span class="stat-card__label">Mode</span><strong class="stat-card__value" style="font-size:22px">{{ property.eval_mode|title }}</strong><span class="stat-card__note">{{ 'invites are sent on this run' if property.eval_mode == 'automatic' else 'you choose before sending' }}</span></article></section>
+  <section class="card" style="margin-top:23px"><div class="card__header"><div><h2>Ranked availability</h2><small>Higher scores mean more open slots fit the applicant’s stated availability. Ties use application time.</small></div>{% if result %}{{ simulation_badge() }}{% endif %}</div>
+    {% if result and result.proposals %}
+      {% if result.mode == 'automatic' %}<div class="automation-notice"><strong>Automatic run complete.</strong> {% if result.invited_ids %}{{ result.invited_ids|length }} applicant{{ '' if result.invited_ids|length == 1 else 's' }} received calendar access.{% else %}No new invitations were needed.{% endif %}</div>{% endif %}
+      <form method="post" action="/properties/{{ property.id }}/evaluation/invite"><div class="table-wrap"><table class="data-table"><thead><tr>{% if result.mode == 'assisted' %}<th>Select</th>{% endif %}<th>Rank</th><th>Applicant</th><th>Availability score</th><th>Why this rank</th><th>Status</th></tr></thead><tbody>{% for proposal in result.proposals %}{% set applicant = applications_by_id[proposal.application_id] %}<tr>{% if result.mode == 'assisted' %}<td><input type="checkbox" name="application_ids" value="{{ proposal.application_id }}" {% if loop.index > result.remaining %}disabled{% endif %}></td>{% endif %}<td><strong>#{{ proposal.position }}</strong></td><td><a class="person-cell" href="/applications/{{ applicant.id }}"><span class="avatar avatar--table {% if loop.index % 2 == 0 %}avatar--green{% endif %}">{{ proposal.name[:2]|upper }}</span><span><strong>{{ proposal.name }}</strong><small>{{ applicant.availability|replace(',', ' · ') }}</small></span></a></td><td><strong>{{ proposal.score }} / {{ proposal.total_slots }}</strong> open slots</td><td class="muted">{{ proposal.explanation }}</td><td>{% if proposal.application_id in result.invited_ids %}{{ status_badge('invited') }}{% elif proposal.application_id in result.left_out_ids %}<span class="badge">Over limit</span>{% else %}{{ status_badge(applicant.status) }}{% endif %}</td></tr>{% endfor %}</tbody></table></div>{% if result.mode == 'assisted' %}<div class="card__footer"><span class="muted">Choose up to {{ result.remaining }} applicants. Nothing is sent until you confirm.</span>{{ button('Give calendar access', 'primary', type='submit', disabled=(result.remaining == 0)) }}</div>{% endif %}</form>
+    {% elif result %}{{ empty_state('No eligible applicants', 'Applicants appear here once you have approved their required documents.') }}{% else %}<div class="evaluation-intro"><div><span class="simulation-badge">✦ Simulation</span><h3>Run a transparent availability check.</h3><p>The score only compares stated availability with your open slots. It does not decide who gets the rental.</p></div><form method="post" action="/properties/{{ property.id }}/evaluation">{{ button('Run evaluation', 'primary', type='submit') }}</form></div>{% endif %}
+  </section>
+  {% else %}
+    <section class="page-heading"><div><div class="eyebrow">Evaluation</div><h1>Property not found</h1><p>Choose a property from your dashboard to run an evaluation.</p></div>{{ button('Go to dashboard', 'secondary', href='/') }}</section>
+  {% endif %}
 {% endblock %}

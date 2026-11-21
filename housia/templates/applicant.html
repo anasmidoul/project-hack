@@ -1,17 +1,25 @@
-{% extends "base_mobile.html" %}
-{% block title %}Applicant{% endblock %}
+{% extends 'base_mobile.html' %}
+{% from '_macros.html' import button, status_badge, empty_state %}
+{% block title %}Your application · HOUSIA{% endblock %}
 {% block content %}
-<h1>Applicant</h1>
-<p>Placeholder page. Template unit: C5.</p>
-<p>Context variables:</p>
-<ul>
-  <li>application</li>
-  <li>property</li>
-  <li>needs_details</li>
-  <li>demo_files</li>
-  <li>slots</li>
-  <li>notifications</li>
-  <li>is_finalist</li>
-  <li>contract_status</li>
-</ul>
+  {% if application and property %}
+  <section class="applicant-header"><div><div class="eyebrow">Your application</div><h1>{{ property.title }}</h1><p>{{ property.city }} · €{{ property.rent_eur }} / month</p></div>{{ status_badge(application.status) }}</section>
+  <div class="progress-line"><span class="{% if application.status != 'new' %}is-done{% endif %}">1<small>Details</small></span><i class="{% if application.status not in ['new','docs_requested','docs_correction'] %}is-done{% endif %}"></i><span class="{% if application.calendar_access %}is-done{% endif %}">2<small>Document</small></span><i class="{% if application.calendar_access %}is-done{% endif %}"></i><span class="{% if application.status in ['booked','attended','finalist','completed'] %}is-done{% endif %}">3<small>Viewing</small></span></div>
+  {% if needs_details %}
+    <section class="mobile-card"><div class="mobile-card__header"><span class="step-number">1</span><div><h2>Complete your details</h2><p>We need these details to create your application.</p></div></div><form method="post" action="/a/{{ application.token }}/details"><div class="stack"><div class="form-field"><label>Name *</label><input class="input" name="name" required value="{{ application.name }}"></div><div class="form-field"><label>Email *</label><input class="input" type="email" name="email" required value="{{ application.email }}"></div><div class="form-field"><label>Phone</label><input class="input" name="phone" value="{{ application.phone }}"></div><div class="form-field"><label>Preferences</label><textarea name="preferences">{{ application.preferences }}</textarea></div><fieldset class="form-field"><legend class="field-label">Viewing availability</legend><div class="choice-row">{% for value, label in [('morning','Mornings'),('afternoon','Afternoons'),('weekend','Weekends')] %}<label class="choice"><input type="checkbox" name="availability" value="{{ value }}" {% if value in application.availability.split(',') %}checked{% endif %}><span>{{ label }}</span></label>{% endfor %}</div></fieldset></div><div class="mobile-form-footer">{{ button('Save details', 'primary', type='submit', extra_class='button--wide') }}</div></form></section>
+  {% else %}
+    <section class="mobile-card mobile-card--compact"><div class="mobile-card__header"><span class="step-number {% if application.doc_file %}is-done{% endif %}">2</span><div><h2>Required document</h2><p>Please provide: <strong>{{ property.required_document }}</strong></p></div></div>
+      {% if application.status in ['new','docs_requested','docs_correction'] %}<form method="post" action="/a/{{ application.token }}/document"><div class="form-field"><label for="file_name">Choose a demo file</label><select id="file_name" name="file_name" required><option value="">Select a file</option>{% for file in demo_files %}<option value="{{ file }}">{{ file }}</option>{% endfor %}</select></div>{% if application.status == 'docs_correction' %}<div class="correction-note"><strong>The landlord asked for a correction</strong><p>{{ application.doc_note }}</p></div>{% endif %}<div class="mobile-form-footer">{{ button('Submit document', 'primary', type='submit', extra_class='button--wide') }}</div></form>{% elif application.status == 'docs_uploaded' %}<div class="pending-panel"><span>◌</span><div><strong>Document received</strong><p>The landlord is reviewing it. We’ll update this page when they respond.</p></div></div>{% else %}<div class="submitted-document"><span class="document-file__icon">PDF</span><div><strong>{{ application.doc_file or property.required_document }}</strong><small>Document accepted</small></div><span>✓</span></div>{% endif %}
+    </section>
+    {% if application.calendar_access %}
+      {% set active_offer = slots|selectattr('state', 'equalto', 'offered_to_me')|list %}
+      {% if active_offer %}<section class="offer-card"><div class="eyebrow">A slot opened up for you</div><h2>Accept your viewing offer</h2>{% for slot in active_offer %}<p><strong>{{ slot.starts_at }}</strong> · {{ slot.duration_min }} minutes</p><small>This offer expires {{ slot.offer_expires_at }}.</small><div class="inline-actions" style="margin-top:16px"><form method="post" action="/a/{{ application.token }}/offer/accept"><input type="hidden" name="slot_id" value="{{ slot.id }}">{{ button('Accept offer', 'primary', type='submit') }}</form><form method="post" action="/a/{{ application.token }}/offer/decline"><input type="hidden" name="slot_id" value="{{ slot.id }}">{{ button('Decline', 'quiet', type='submit') }}</form></div>{% endfor %}</section>{% endif %}
+      <section class="mobile-card mobile-card--compact"><div class="mobile-card__header"><span class="step-number {% if application.status in ['booked','attended','finalist','completed'] %}is-done{% endif %}">3</span><div><h2>Book a viewing</h2><p>Choose a time that works for you, or join a waiting list.</p></div></div>{% if slots %}<div class="mobile-slot-list">{% for slot in slots %}<article class="mobile-slot mobile-slot--{{ slot.state }}"><div><strong>{{ slot.starts_at }}</strong><small>{{ slot.duration_min }} minute viewing</small></div><div>{% if slot.state == 'free' %}<form method="post" action="/a/{{ application.token }}/book"><input type="hidden" name="slot_id" value="{{ slot.id }}">{{ button('Book', 'primary', type='submit') }}</form>{% elif slot.state == 'mine' %}<form method="post" action="/a/{{ application.token }}/cancel"><input type="hidden" name="slot_id" value="{{ slot.id }}">{{ button('Cancel', 'secondary', type='submit') }}</form>{% elif slot.state == 'taken' %}<form method="post" action="/a/{{ application.token }}/waitlist/join"><input type="hidden" name="slot_id" value="{{ slot.id }}">{{ button('Join waitlist', 'secondary', type='submit') }}</form>{% elif slot.state == 'waiting' %}<form method="post" action="/a/{{ application.token }}/waitlist/leave"><input type="hidden" name="slot_id" value="{{ slot.id }}">{{ button('Leave list', 'quiet', type='submit') }}</form><small class="wait-position">#{{ slot.waitlist_position }} waiting</small>{% elif slot.state == 'held' %}<span class="badge badge--held">Held for another applicant</span>{% endif %}</div></article>{% endfor %}</div>{% else %}{{ empty_state('No viewing times yet', 'The landlord has not added any viewing slots yet. Check back soon.') }}{% endif %}</section>
+    {% else %}<section class="mobile-info"><span>⌁</span><p><strong>Viewing calendar locked</strong> The landlord will open the calendar after reviewing your required document.</p></section>{% endif %}
+  {% endif %}
+  {% if is_finalist %}<section class="mobile-info mobile-info--celebrate"><span>✦</span><p><strong>You are the selected candidate.</strong>{% if contract_status == 'signed' %} Your signed contract is on file.{% else %} The landlord will share the next contract step with you shortly.{% endif %}</p></section>{% endif %}
+  {% if notifications %}<section class="applicant-notices"><h2>Updates</h2>{% for note in notifications %}<div class="applicant-notice"><strong>{{ note.title }}</strong><p>{{ note.body }}</p></div>{% endfor %}</section>{% endif %}
+  {% else %}
+    <section class="mobile-hero"><div class="eyebrow">Your application</div><h1>Application not found</h1><p>This secure link may no longer be active.</p></section>
+  {% endif %}
 {% endblock %}

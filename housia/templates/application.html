@@ -1,13 +1,28 @@
-{% extends "base.html" %}
-{% block title %}Application{% endblock %}
+{% extends 'base.html' %}
+{% from '_macros.html' import button, status_badge %}
+{% block title %}{{ application.name if application else 'Application' }} · HOUSIA{% endblock %}
+{% block breadcrumb %}<span class="crumb">Applications / <strong>{{ application.name if application else 'Application' }}</strong></span>{% endblock %}
 {% block content %}
-<h1>Application</h1>
-<p>Placeholder page. Template unit: C3.</p>
-<p>Context variables:</p>
-<ul>
-  <li>application</li>
-  <li>property</li>
-  <li>demo_files</li>
-  <li>conversation</li>
-</ul>
+  {% if application and property %}
+  <section class="page-heading"><div><div class="eyebrow">{{ property.title }}</div><h1>{{ application.name }}</h1><p>{{ application.email or 'No email supplied' }}{% if application.phone %} · {{ application.phone }}{% endif %}</p></div><div class="inline-actions">{{ status_badge(application.status) }}{% if conversation %}{{ button('Open conversation', 'secondary', href='/conversations/' ~ conversation.id) }}{% endif %}</div></section>
+  <div class="split-grid">
+    <section class="stack">
+      <article class="card"><div class="card__header"><div><h2>Application details</h2><small>Submitted via {{ application.source|title }}.</small></div></div><div class="card__body"><dl class="info-list"><div class="info-list__row"><dt>Viewing availability</dt><dd>{{ application.availability|replace(',', ' · ') or 'Not specified' }}</dd></div><div class="info-list__row"><dt>Preferences</dt><dd>{{ application.preferences or 'No extra preferences shared.' }}</dd></div><div class="info-list__row"><dt>Applied</dt><dd>{{ application.created_at }}</dd></div></dl></div></article>
+      <article class="card"><div class="card__header"><div><h2>Private document review</h2><small>Required: {{ property.required_document }}</small></div>{% if application.doc_file %}{{ status_badge(application.status) }}{% endif %}</div><div class="card__body">
+        {% if application.doc_file %}<div class="document-file"><span class="document-file__icon">PDF</span><div><strong>{{ application.doc_file }}</strong><small>Demo file supplied by applicant</small></div><a class="button button--secondary" href="/static/demo/{{ application.doc_file }}">View</a></div>{% else %}<p class="muted">No document has been submitted yet.</p>{% endif %}
+        {% if application.doc_summary %}<div class="ai-note"><span class="simulation-badge">✦ Private AI review</span><p>{{ application.doc_summary }}</p><small>Your documents stay private. Review the information yourself before taking action.</small></div>{% endif %}
+        <div class="inline-actions" style="margin-top:17px">
+          {% if application.status == 'new' %}<form method="post" action="/applications/{{ application.id }}/document/request">{{ button('Request document', 'primary', type='submit') }}</form>{% endif %}
+          {% if application.status == 'docs_uploaded' %}<form method="post" action="/applications/{{ application.id }}/document/approve">{{ button('Approve document', 'primary', type='submit') }}</form><a class="button button--secondary" href="#correction">Ask for correction</a>{% endif %}
+          {% if application.status == 'docs_approved' or application.status == 'docs_uploaded' %}<form method="post" action="/applications/{{ application.id }}/calendar-access">{{ button('Give calendar access', 'secondary', type='submit') }}</form>{% endif %}
+        </div>
+      </div></article>
+      {% if application.status == 'docs_correction' %}<article class="card card--tint"><div class="card__body"><strong>Correction requested</strong><p class="muted" style="margin:5px 0 0">{{ application.doc_note }}</p></div></article>{% endif %}
+    </section>
+    <aside class="stack"><article class="card card--tint"><div class="card__body"><div class="eyebrow">Next action</div>{% if application.status == 'new' %}<h2>Request their document.</h2><p class="muted">Ask {{ application.name.split(' ')[0] }} for a {{ property.required_document }} to keep their application moving.</p>{% elif application.status == 'docs_uploaded' %}<h2>Review their document.</h2><p class="muted">Approve it, or explain what needs to be corrected.</p>{% elif application.status == 'docs_approved' %}<h2>Ready for a viewing.</h2><p class="muted">You can give calendar access directly or include them in an evaluation run.</p>{% elif application.calendar_access %}<h2>Calendar access granted.</h2><p class="muted">{{ application.name.split(' ')[0] }} can now book an available viewing.</p>{% else %}<h2>Application in progress.</h2><p class="muted">We’ll keep this profile up to date as the process continues.</p>{% endif %}</div></article><article class="card decision-card"><div class="card__body"><div class="eyebrow">Step 3 · Decision message</div><div class="inline-actions" style="justify-content:space-between"><h3>Reply via {{ application.source|title }}</h3><span class="channel-pill channel-pill--{{ application.source }}">{{ application.source|title }}</span></div>{% if application.status in ['docs_uploaded','docs_approved','invited','booked','attended'] %}<div class="decision-message"><strong>Accept</strong><p>Hi {{ application.name.split(' ')[0] }}, thank you for sharing your documents. Your application matches the requirements for {{ property.title }}. I’ve opened the viewing calendar—please choose a time that works for you.</p><button class="button button--primary" type="button">Send acceptance</button></div><div class="decision-message decision-message--decline"><strong>Decline</strong><p>Hi {{ application.name.split(' ')[0] }}, thank you for your interest and for sharing your documents. We’re moving forward with applications that fit the current requirements more closely. I wish you the best in your search.</p><button class="button button--secondary" type="button">Send decline</button></div>{% else %}<p class="muted" style="font-size:12px;margin:9px 0 0">Decision messages become available once there is enough information to review.</p>{% endif %}</div></article><article class="card"><div class="card__body"><div class="eyebrow">Applicant link</div><p class="mono" style="overflow-wrap:anywhere">/a/{{ application.token }}</p><a class="button button--secondary" href="/a/{{ application.token }}">Open applicant view ↗</a></div></article></aside>
+  </div>
+  {% if application.status == 'docs_uploaded' %}<details id="correction" class="disclosure-card"><summary><span><strong>Ask for a correction</strong><small>Explain what {{ application.name }} should upload or amend.</small></span><b>+</b></summary><form method="post" action="/applications/{{ application.id }}/document/correction" class="card"><div class="card__body"><div class="form-field"><label for="note">Message to {{ application.name }}</label><textarea id="note" name="note" required placeholder="For example: Please upload the most recent payslip, showing your full name."></textarea></div><div class="form-actions">{{ button('Send correction request', 'primary', type='submit') }}</div></div></form></details>{% endif %}
+  {% else %}
+    <section class="page-heading"><div><div class="eyebrow">Applications</div><h1>Application not found</h1><p>This application may have been removed, or the demo data has not been loaded yet.</p></div>{{ button('Go to dashboard', 'secondary', href='/') }}</section>
+  {% endif %}
 {% endblock %}

@@ -1,11 +1,23 @@
-{% extends "base.html" %}
-{% block title %}Schedule{% endblock %}
+{% extends 'base.html' %}
+{% from '_macros.html' import button, property_tabs, status_badge, empty_state %}
+{% block title %}Schedule · {{ property.title if property else 'Property' }} · HOUSIA{% endblock %}
+{% block breadcrumb %}<span class="crumb">Properties / {{ property.title if property else 'Property' }} / <strong>Schedule</strong></span>{% endblock %}
 {% block content %}
-<h1>Schedule</h1>
-<p>Placeholder page. Template unit: C4.</p>
-<p>Context variables:</p>
-<ul>
-  <li>property</li>
-  <li>slots</li>
-</ul>
+  {% if property %}
+  <section class="page-heading"><div><div class="eyebrow">{{ property.title }}</div><h1>Viewing schedule</h1><p>Create slots, see bookings, and keep waiting lists moving automatically.</p></div><a href="#new-slot" class="button button--primary">+ Add viewing slot</a></section>
+  {{ property_tabs(property, 'schedule') }}
+  <div class="split-grid">
+    <section class="stack">
+      <article class="card"><div class="card__header"><div><h2>Upcoming slots</h2><small>A cancelled booking is offered to the next person in line for 30 minutes.</small></div><span class="badge badge--invited">{{ slots|length }} slots</span></div>
+        {% if slots %}<div class="schedule-list">{% for slot in slots %}<article class="schedule-slot"><div class="schedule-slot__time"><strong>{{ slot.starts_at.strftime('%a') if slot.starts_at.strftime is defined else slot.starts_at }}</strong><span>{{ slot.starts_at.strftime('%d %b') if slot.starts_at.strftime is defined else '' }}</span><b>{{ slot.starts_at.strftime('%H:%M') if slot.starts_at.strftime is defined else '' }}</b></div><div class="schedule-slot__body"><div class="inline-actions" style="justify-content:space-between"><div><strong>{{ slot.duration_min }} minute viewing</strong><p class="muted" style="font-size:11px;margin:3px 0 0">{{ property.address }}</p></div>{% if slot.booked %}{{ status_badge('booked') }}{% elif slot.offer %}{{ status_badge('held') }}{% else %}{{ status_badge('free') }}{% endif %}</div>
+          {% if slot.booked %}<div class="booking-person"><span class="avatar avatar--table">{{ slot.booked.name[:2]|upper }}</span><div><strong>{{ slot.booked.name }}</strong><small>Booked applicant</small></div><form method="post" action="/slots/{{ slot.id }}/cancel">{{ button('Cancel booking', 'quiet', type='submit') }}</form></div>{% elif slot.offer %}<div class="booking-person booking-person--offer"><span class="avatar avatar--table avatar--yellow">{{ slot.offer.application.name[:2]|upper }}</span><div><strong>Offer held for {{ slot.offer.application.name }}</strong><small>Expires {{ slot.offer.expires_at }}</small></div></div>{% else %}<p class="schedule-slot__free">Available to applicants with calendar access.</p>{% endif %}
+          {% if slot.waitlist %}<div class="waitlist-line"><span>Waiting list</span>{% for applicant in slot.waitlist %}<a href="/applications/{{ applicant.id }}" title="{{ applicant.name }}" class="avatar avatar--table {% if loop.index % 2 == 0 %}avatar--blue{% else %}avatar--green{% endif %}">{{ applicant.name[:2]|upper }}</a>{% endfor %}<small>{{ slot.waitlist|length }} waiting</small></div>{% endif %}
+        </div><div class="schedule-slot__actions">{% if not slot.booked and not slot.offer and not slot.waitlist %}<form method="post" action="/slots/{{ slot.id }}/delete">{{ button('Delete', 'quiet', type='submit') }}</form>{% endif %}</div></article>{% endfor %}</div>{% else %}{{ empty_state('No viewing slots yet', 'Add a few dates so invited applicants can choose a time that works for them.', 'Add a slot', '#new-slot') }}{% endif %}
+      </article>
+    </section>
+    <aside class="stack"><article class="card calendar-sync"><div class="card__body"><div class="eyebrow">Step 4 · Calendar</div><h2>Keep your agenda in sync.</h2><p class="muted">Choose where confirmed viewings appear. If an applicant cancels, the event disappears from your calendar immediately.</p><div class="calendar-sync__choices"><button type="button" class="calendar-choice is-selected"><span>G</span><div><strong>Google Calendar</strong><small>Connect your owner calendar</small></div><b>✓</b></button><button type="button" class="calendar-choice"><span>h</span><div><strong>HOUSIA agenda</strong><small>Keep viewings in this workspace</small></div></button></div></div></article><article id="new-slot" class="card card--tint"><div class="card__body"><div class="eyebrow">New appointment</div><h2>Add a viewing slot</h2><form method="post" action="/properties/{{ property.id }}/slots"><div class="form-field"><label for="date">Date</label><input class="input" id="date" type="date" name="date" required></div><div class="form-grid" style="margin-top:12px"><div class="form-field"><label for="time">Start time</label><input class="input" id="time" type="time" name="time" required></div><div class="form-field"><label for="duration">Duration</label><select id="duration" name="duration_min"><option value="30">30 min</option><option value="45">45 min</option><option value="60">60 min</option></select></div></div><div class="form-actions">{{ button('Create slot', 'primary', type='submit') }}</div></form></div></article><article class="card"><div class="card__body"><div class="eyebrow">How waiting lists work</div><ol class="instruction-list"><li>A booked applicant cancels.</li><li>The first person waiting gets a private 30-minute offer.</li><li>If it expires or is declined, the offer moves down the list.</li></ol></div></article></aside>
+  </div>
+  {% else %}
+    <section class="page-heading"><div><div class="eyebrow">Schedule</div><h1>Property not found</h1><p>Choose a property from your dashboard to manage viewing slots.</p></div>{{ button('Go to dashboard', 'secondary', href='/') }}</section>
+  {% endif %}
 {% endblock %}

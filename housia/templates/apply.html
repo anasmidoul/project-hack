@@ -1,10 +1,12 @@
-{% extends "base_mobile.html" %}
-{% block title %}Apply{% endblock %}
+{% extends 'base_mobile.html' %}
+{% from '_macros.html' import button %}
+{% block title %}Apply for {{ property.title if property else 'this property' }} · HOUSIA{% endblock %}
 {% block content %}
-<h1>Apply</h1>
-<p>Placeholder page. Template unit: C5.</p>
-<p>Context variables:</p>
-<ul>
-  <li>property</li>
-</ul>
+  {% if property %}
+  <section class="mobile-hero"><div class="eyebrow">Rental application</div><h1>{{ property.title }}</h1><p>{{ property.address }}, {{ property.city }}</p><div class="mobile-hero__rent">€{{ property.rent_eur }} <small>/ month</small></div></section>
+  <section class="mobile-card"><div class="mobile-card__header"><span class="step-number">1</span><div><h2>Tell us about yourself</h2><p>This creates your secure application space.</p></div></div><form method="post" action="/apply/{{ property.id }}"><div class="stack"><div class="form-field"><label for="name">Full name *</label><input class="input" id="name" name="name" autocomplete="name" required placeholder="Your full name"></div><div class="form-field"><label for="email">Email *</label><input class="input" id="email" type="email" autocomplete="email" name="email" required placeholder="you@example.com"></div><div class="form-field"><label for="phone">Phone number</label><input class="input" id="phone" type="tel" autocomplete="tel" name="phone" placeholder="600 000 000"></div><div class="form-field"><label for="preferences">Anything the landlord should know?</label><textarea id="preferences" name="preferences" placeholder="For example, your preferred move-in date."></textarea></div><fieldset class="form-field"><legend class="field-label">When could you attend a viewing?</legend><div class="choice-row"><label class="choice"><input type="checkbox" name="availability" value="morning"><span>Mornings</span></label><label class="choice"><input type="checkbox" name="availability" value="afternoon"><span>Afternoons</span></label><label class="choice"><input type="checkbox" name="availability" value="weekend"><span>Weekends</span></label></div></fieldset></div><div class="mobile-form-footer">{{ button('Start application →', 'primary', type='submit', extra_class='button--wide') }}<small>By continuing, you share these details with the property owner for this application.</small></div></form></section>
+  <section class="mobile-info"><span>✦</span><p><strong>What happens next?</strong> The landlord reviews your application and asks for the required document before opening their viewing calendar.</p></section>
+  {% else %}
+    <section class="mobile-hero"><div class="eyebrow">Rental application</div><h1>Property not found</h1><p>This application link may no longer be active.</p></section>
+  {% endif %}
 {% endblock %}

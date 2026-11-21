@@ -46,3 +46,5 @@ IDEALISTA_INBOX_URL: str = _str("IDEALISTA_INBOX_URL", "http://localhost:5000/mo
 BROWSER_ALLOWED_DOMAINS: list[str] = _list("BROWSER_ALLOWED_DOMAINS", "localhost")
 OPENAI_API_KEY: str | None = _str("OPENAI_API_KEY")
 SECRET_KEY: str = _str("SECRET_KEY", "dev")
+OWNER_PASSWORD: str | None = _str("OWNER_PASSWORD")
+WORKSPACE_AI_NOTES: bool = _str("WORKSPACE_AI_NOTES", "0") == "1"
