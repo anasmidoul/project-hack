@@ -6,7 +6,10 @@ The web app never sends a portal message. Approving or writing a reply only stor
 `approved`; the worker sends it on its next loop.
 """
 
-from flask import Blueprint, abort, flash, redirect, render_template, request
+import csv
+import io
+
+from flask import Blueprint, Response, abort, flash, redirect, render_template, request
 
 from housia import core, db
 from housia.services import conversations
@@ -50,6 +53,40 @@ def list_page(property_id):
         prop = _property(conn, property_id)
         rows = conversations.list_conversations(conn, property_id)
     return render_template("conversations.html", property=prop, conversations=rows)
+
+
+def _csv_cell(value):
+    """Neutralise spreadsheet formulas: message bodies come from strangers."""
+    text = "" if value is None else str(value)
+    return "'" + text if text[:1] in ("=", "+", "-", "@") else text
+
+
+@bp.get("/properties/<int:property_id>/conversations/export.csv")
+def export_csv(property_id):
+    with db.tx() as conn:
+        _property(conn, property_id)
+        rows = conn.execute(
+            """
+            SELECT c.id AS conversation_id, c.channel, c.contact_name,
+                   c.status AS conversation_status, m.direction, m.status AS message_status,
+                   m.created_at, m.sent_at, m.body
+              FROM conversations c JOIN messages m ON m.conversation_id = c.id
+             WHERE c.property_id = ?
+             ORDER BY c.id, m.created_at, m.id
+            """,
+            (property_id,),
+        ).fetchall()
+    out = io.StringIO()
+    writer = csv.writer(out)
+    columns = ["conversation_id", "channel", "contact_name", "conversation_status", "direction",
+               "message_status", "created_at", "sent_at", "body"]
+    writer.writerow(columns)
+    for row in rows:
+        writer.writerow([_csv_cell(row[name]) for name in columns])
+    return Response(
+        out.getvalue(), content_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition":
+                 f'attachment; filename="conversations-property-{property_id}.csv"'})
 
 
 @bp.get("/conversations/<int:conversation_id>")

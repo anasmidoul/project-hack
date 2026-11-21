@@ -1,4 +1,6 @@
 """Unit A5 tests: landlord conversation routes."""
+import csv
+import io
 from contextlib import contextmanager
 
 import pytest
@@ -100,3 +102,26 @@ def test_pause_sets_setting_and_returns_to_referrer(client):
     assert r.headers["Location"] == "/"
     with db.tx() as conn:
         assert core.get_setting(conn, "worker_paused") == "0"
+
+
+def test_export_csv_rows_and_header(client, thread):
+    r = client.get("/properties/1/conversations/export.csv")
+    assert r.status_code == 200
+    assert r.headers["Content-Type"] == "text/csv; charset=utf-8"
+    assert r.headers["Content-Disposition"] == 'attachment; filename="conversations-property-1.csv"'
+    rows = list(csv.reader(io.StringIO(r.get_data(as_text=True))))
+    assert rows[0] == ["conversation_id", "channel", "contact_name", "conversation_status",
+                       "direction", "message_status", "created_at", "sent_at", "body"]
+    cid = str(thread["conv"])
+    assert rows[1][:6] == [cid, "mock", "Ana Lopez", "needs_landlord", "in", "received"]
+    assert rows[1][8] == "Do you allow pets?"
+    assert rows[2][:6] == [cid, "mock", "Ana Lopez", "needs_landlord", "out", "draft"]
+    assert rows[2][8] == "Let me check."
+    assert len(rows) == 3
+
+
+def test_export_csv_quotes_formulas_and_404(client, thread):
+    client.post(f"/conversations/{thread['conv']}/reply", data={"body": "=HYPERLINK(\"x\")"})
+    body = client.get("/properties/1/conversations/export.csv").get_data(as_text=True)
+    assert "'=HYPERLINK" in body
+    assert client.get("/properties/99/conversations/export.csv").status_code == 404

@@ -6,7 +6,7 @@ Contract: DESIGN.md section 9.
 from flask import Blueprint, flash, redirect, render_template, request
 
 from housia import core, db
-from housia.services import applications, documents, properties
+from housia.services import applications, conversations, decisions, documents, properties
 
 bp = Blueprint("applications", __name__)
 
@@ -95,6 +95,51 @@ def calendar_access(application_id):
     except core.DomainError as exc:
         flash(str(exc), "error")
     return redirect(f"/applications/{application_id}")
+
+
+@bp.post("/applications/<int:application_id>/accept")
+def accept(application_id):
+    _send_decision(application_id, "accept")
+    return redirect(f"/applications/{application_id}")
+
+
+@bp.post("/applications/<int:application_id>/decline")
+def decline(application_id):
+    _send_decision(application_id, "decline")
+    return redirect(f"/applications/{application_id}")
+
+
+def _send_decision(application_id, kind):
+    """Check, write the message with no transaction open (it may call the model), then apply the
+    decision, queue the message for the worker and notify, all in one transaction."""
+    try:
+        with db.tx() as conn:
+            app, prop = decisions.check(conn, application_id, kind)
+        link = core.applicant_url(app["token"]) if kind == "accept" else None
+        body = decisions.write_message(kind, prop, app, link)
+        with db.tx() as conn:
+            now = core.now(conn)
+            if kind == "accept":
+                decisions.accept(conn, application_id, now)
+            else:
+                decisions.decline(conn, application_id, now)
+            conversation = conn.execute(
+                "SELECT id FROM conversations WHERE application_id=? ORDER BY id DESC LIMIT 1", (application_id,)
+            ).fetchone()
+            if conversation is not None:
+                conversations.save_outgoing(conn, conversation["id"], body, "approved", None, None, now)
+            core.notify(conn, property_id=prop["id"], application_id=application_id,
+                        title=decisions.MESSAGE_TITLE, body=body, now=now)
+            what = "Acceptance" if kind == "accept" else "Decline"
+            where = "queued for the portal and shown" if conversation is not None else "shown"
+            result = "invited to a viewing" if kind == "accept" else "application closed"
+            core.notify(conn, property_id=prop["id"], application_id=None,
+                        title=f"{what} sent to {app['name']}",
+                        body=f"{result.capitalize()}. The message was {where} on their applicant page.",
+                        now=now)
+        flash(f"{what} sent.", "ok")
+    except core.DomainError as exc:
+        flash(str(exc), "error")
 
 
 def _document_action(application_id, service, success):
