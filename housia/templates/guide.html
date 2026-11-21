@@ -73,7 +73,7 @@
     {% endcall %}
     {% call step(9, 'Reset') %}
       <p>In the demo room press “Reset demo”.</p>
-      <p class="guide-step__result"><strong>What happens:</strong> all data goes back to the starting state, for everyone using this demo.</p>
+      <p class="guide-step__result"><strong>What happens:</strong> all data goes back to the starting state, {% if viewer_role == 'guest' %}in your private copy only. Other visitors are not affected.{% else %}for everyone using this demo.{% endif %}</p>
       <div class="inline-actions">{{ button('Demo room', 'primary', href='/demo') }}</div>
     {% endcall %}
   </ol>
