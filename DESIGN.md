@@ -108,7 +108,7 @@ only). After the merge, those stubs belong to their units.
 | **A2** Idealista channel | `housia/channels/idealista.py`, `scripts/idealista_probe.py`, `tests/test_idealista_channel.py` |
 | **A3** Conversations and worker | `housia/services/conversations.py`, `housia/worker.py`, `tests/test_conversations.py`, `tests/test_worker.py` |
 | **A4** Reply engine | `housia/services/reply_engine.py`, `tests/test_reply_engine.py` |
-| **A5** Conversation routes | `housia/web/conversations.py`, `tests/test_web_conversations.py` |
+| **A5** Conversation routes | `housia/web/conversations.py`, `tests/test_web_conversations.py`, `tests/test_block1_flow.py` (end-to-end: mock inbox → worker → reply) |
 | **A6** Badi channel (last) | `housia/channels/badi.py` |
 | **A7** Privacy guard and model gateway | `housia/privacy.py`, `housia/llm.py`, `tests/test_privacy.py`, `tests/test_llm.py` |
 | **A8** Document check for the landlord | `housia/services/doc_summary.py`, `tests/test_doc_summary.py` |
@@ -523,7 +523,9 @@ def set_conversation_status(conn, conversation_id, status) -> None
 def save_outgoing(conn, conversation_id, body, status, in_reply_to, note, now) -> int   # status: 'draft' | 'approved'
 def approve(conn, message_id, body: str | None, now) -> None   # draft → approved; optional edited text
 def discard(conn, message_id) -> None                     # draft → discarded
-def unanswered(conn, channel: str) -> list[Row]           # incoming messages with no live reply yet
+def unanswered(conn, channel: str) -> list[Row]           # incoming messages with no reply row at all
+    # A discarded draft still counts as a reply row: discarding means the landlord takes over
+    # that message, so the worker does not draft again. A manual reply is still possible.
 def pending_to_send(conn, channel: str) -> list[Row]      # approved outgoing + conversation external_id
 def mark_sent(conn, message_id, now) -> None
 def mark_failed(conn, message_id, error: str) -> None
@@ -577,7 +579,9 @@ def assert_clean(text: str, mapping: dict[str, str]) -> None   # PrivacyError if
 def complete(system: str, user: str, known: Mapping[str, str] | None = None) -> str
     # 1. masked = privacy.mask(user, known)      2. privacy.assert_clean(masked.text, masked.mapping)
     # 3. call the model with system + masked.text  4. return privacy.unmask(answer, masked.mapping)
-    # Raises LLMError on any failure. `system` must be fixed text with no personal data.
+    # Raises LLMError on any failure (also when REPLY_MODEL or OPENAI_API_KEY is missing).
+    # `system` must be fixed text with no personal data.
+    # Uses the OpenAI Responses API with store=False, so OpenAI does not keep the request.
 ```
 
 What `mask` replaces:
@@ -590,7 +594,7 @@ What `mask` replaces:
   `Nombre:`, `DNI:`, `NIE:`, `Passport:`, `IBAN:`, `Address:`, `Dirección:`.
 
 Placeholders look like `[NAME_1]`, `[ID_1]`, `[IBAN_1]`, `[PHONE_1]`, `[EMAIL_1]`,
-`[NUMBER_1]`. The same value gets the same placeholder within one call, so the model can still
+`[ADDRESS_1]`, `[CARD_1]`, `[NUMBER_1]`. The same value gets the same placeholder within one call, so the model can still
 reason ("the name on the payslip matches the applicant").
 
 Known limits, to say out loud rather than hide:
@@ -669,7 +673,13 @@ relying on details; the API changed a lot between versions.
 - Put the start URL in the task text. Limit steps with `agent.run(max_steps=..., timeout=...)`.
 - Typed results: `output_model_schema=<Pydantic model>`, read `result.structured_output`
   (`None` if the run did not finish).
-- Restrict navigation with `Browser(allowed_domains=[...])`.
+- Restrict navigation with `Browser(allowed_domains=[...])`. `localhost` does not cover
+  `127.0.0.1`, and `idealista.com` does not cover every subdomain: for real runs use
+  `BROWSER_ALLOWED_DOMAINS=localhost,*.idealista.com`.
+- Always pass `'chromium'` (or `'chrome'`) to `Browser(...)`. With no argument it starts a paid
+  cloud browser.
+- The channel turns the agent's judge off (`judge=False`) to save one model call per run, and
+  treats a run without a confirmed result as a failure.
 
 Sketch:
 ```python
@@ -745,6 +755,11 @@ run_once(channel):
 ```
 - No transaction is open while a model or the browser is working. They take seconds, and an
   open write transaction would block the web app.
+- `run_once` returns counts: `paused`, `recorded`, `drafted`, `approved`, `sent`, `failed`
+  (failed sends), `errors` (messages that could not be recorded or answered; each is printed).
+- The application is created in its own transaction, after the message is recorded, and the
+  reply step tries again while a conversation has no application. So a failure there never
+  loses a message.
 - If the worker stops between steps, the next loop picks the message up again from
   `unanswered`. The `one_reply_per_incoming` index stops a second reply.
 - The landlord approving a draft only sets it to `approved`. The worker sends it on its next

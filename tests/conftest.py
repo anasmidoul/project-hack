@@ -6,6 +6,19 @@ import pytest
 from housia import config, db
 
 
+@pytest.fixture(autouse=True)
+def isolated_config(monkeypatch):
+    """Tests never use the developer's .env: no API key, no model, template replies, mock portal."""
+    monkeypatch.setattr(config, "OPENAI_API_KEY", None)
+    monkeypatch.setattr(config, "REPLY_MODEL", None)
+    monkeypatch.setattr(config, "BROWSER_MODEL", None)
+    monkeypatch.setattr(config, "REPLY_ENGINE", "template")
+    monkeypatch.setattr(config, "CHANNEL", "mock")
+    monkeypatch.setattr(config, "SEND_ALLOWLIST", [])
+    monkeypatch.setattr(config, "IDEALISTA_INBOX_URL", "http://localhost:5000/mock/inbox")
+    monkeypatch.setattr(config, "BASE_URL", "http://localhost:5000")
+
+
 @pytest.fixture
 def conn():
     """Fresh in-memory database with the schema. Row factory, foreign keys on, autocommit."""
