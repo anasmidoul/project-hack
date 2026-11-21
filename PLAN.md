@@ -43,7 +43,6 @@ The demo has two key moments:
 | M6 | Mock inbox: a local page that looks like a portal chat, used for development and as the demo fallback |
 | M7 | Privacy guard: personal data is masked before every AI model call |
 | M8 | Document check: when a tenant uploads a document, an AI model reads the masked text and sends the landlord a short summary. The landlord still decides. |
-| M9 | Badi as a second channel (last, only if everything else works) |
 
 ### Rental workflow
 
@@ -142,7 +141,7 @@ viewing, and a cancellation passes the slot down the waiting list.
 
 | Person | Block 2 units |
 |---|---|
-| Main backend | A2 Idealista reading and sending, A8 document check, A6 Badi if time allows |
+| Main backend | A2 Idealista reading and sending, A8 document check |
 | Backend 2 | B3 evaluation (both modes), B5 attendance, final candidate and contract, property create and edit |
 | Frontend | `evaluation.html`, `contract.html`, `property_form.html`, polish |
 
@@ -167,6 +166,8 @@ Never cut the two key demo moments or the privacy guard (M7).
 
 ## Later (real pilot)
 
+- **Badi as a second channel** (unit A6). Moved out of the hackathon. Same interface as the
+  Idealista channel, so the worker, reply engine and pages need no change.
 - Permission or a partner agreement with Idealista and Badi.
 - **Encrypt personal data in the database** (names, contact details, document numbers, uploaded
   files), with the key kept outside the database. First step after the hackathon.

@@ -39,11 +39,13 @@ _PAGE_SUMMARY_JS = """
     const looksLikeConversation = /conversa|conversation|mensaje|message|chat/i.test(p) && /\\d/.test(p + u.search);
     if (underInbox || looksLikeConversation) seen.add(p + u.search);
   }
+  // Idealista's inbox lists conversations as items, not links.
+  const items = document.querySelectorAll('[class*="conversation-list__item"]').length;
   const password = document.querySelectorAll('input[type=password]').length;
   return JSON.stringify({
     ready: document.readyState,
     url: location.href,
-    conversations: seen.size,
+    conversations: Math.max(seen.size, items),
     password_fields: password,
     has_body: !!(document.body && document.body.innerText.trim().length),
   });
