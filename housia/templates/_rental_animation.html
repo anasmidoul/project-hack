@@ -1,0 +1,58 @@
+{% set applicants = [
+  ('MC', 'Maya Chen'), ('AR', 'Alex Ruiz'), ('LP', 'Lina Patel'),
+  ('NM', 'Noah Martin'), ('SA', 'Sara Ali'), ('TL', 'Theo Lee'),
+  ('IR', 'Iris Rose'), ('JK', 'Jules Kim'), ('ER', 'Eva Rossi'),
+  ('OB', 'Omar Bell'), ('AL', 'Ada Lewis'), ('BM', 'Ben Moore')
+] %}
+{% set viewings = [(0, '09:00'), (2, '10:00'), (4, '11:00'), (6, '12:00')] %}
+{% macro applicant_card(person, label='', mark='') %}
+  <div class="rental-animation__card">
+    <span class="rental-animation__initials">{{ person[0] }}</span>
+    <span class="rental-animation__person"><strong>{{ person[1] }}</strong>{% if label %}<small>{{ label }}</small>{% endif %}</span>
+    {% if mark %}<span class="rental-animation__mark">{{ mark }}</span>{% endif %}
+  </div>
+{% endmacro %}
+<section class="rental-animation" aria-labelledby="rental-animation-title">
+  <header class="rental-animation__header">
+    <h2 id="rental-animation-title">From enquiry to tenant</h2>
+    <button class="button button--primary rental-animation__play" type="button" hidden>Play</button>
+  </header>
+  <p class="rental-animation__fallback">Twelve enquiries arrive. Six applicants are shortlisted, four book a viewing, and two cancel. Maya Chen is selected for rent.</p>
+  <div class="rental-animation__player" hidden>
+    <div class="rental-animation__board" aria-hidden="true">
+      <div class="rental-animation__panel">
+        <h3><span class="rental-animation__icon">✉</span> Enquiries</h3>
+        <div class="rental-animation__inbox">
+          {% for person in applicants %}
+            <div class="rental-animation__slot" data-enquiry="{{ loop.index0 }}">{{ applicant_card(person, mark='✓') }}</div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="rental-animation__panel">
+        <h3><span class="rental-animation__icon">▦</span> Viewing calendar</h3>
+        <div class="rental-animation__calendar">
+          {% for index, time in viewings %}
+            <div class="rental-animation__booking">
+              <span class="rental-animation__time">{{ time }}</span>
+              <div class="rental-animation__slot" data-viewing="{{ index }}"{% if index in (2, 6) %} data-cancels{% endif %}>
+                {{ applicant_card(applicants[index], 'Cancelled' if index in (2, 6) else '', '×' if index in (2, 6) else '') }}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="rental-animation__panel">
+        <h3><span class="rental-animation__icon">⌂</span> Rental decision</h3>
+        <div class="rental-animation__decision">
+          <div class="rental-animation__slot" data-winner="0">
+            {{ applicant_card(applicants[0], 'Selected for rent', '★') }}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="rental-animation__footer">
+      <p class="rental-animation__caption" role="status">Play the rental journey.</p>
+      <progress class="rental-animation__progress" value="0" max="12000" aria-hidden="true"></progress>
+    </div>
+  </div>
+</section>
