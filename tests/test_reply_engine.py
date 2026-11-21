@@ -48,3 +48,27 @@ def test_llm_unknown_flags(monkeypatch):
     monkeypatch.setattr(llm, "complete", lambda s, u, known=None: "UNKNOWN")
     r = generate_reply(PROP, PRIOR, "Is there a gym?", "Ana", LINK)
     assert r.needs_landlord
+
+
+def test_llm_first_contact_unknown_gets_template_reply(monkeypatch):
+    monkeypatch.setattr(config, "REPLY_ENGINE", "llm")
+    monkeypatch.setattr(llm, "complete", lambda s, u, known=None: "UNKNOWN")
+    r = generate_reply(PROP, [], "Hi, is the room still available?", "Ana", LINK)
+    assert LINK in r.text and "Latest payslip" in r.text and not r.needs_landlord
+
+
+def test_template_still_available_answers_yes(monkeypatch):
+    r = generate_reply(PROP, PRIOR, "Is it still available?", "Ana", LINK)
+    assert "Yes, it is still available." in r.text and not r.needs_landlord
+    rented = dict(PROP, contract_status="signed")
+    r = generate_reply(rented, PRIOR, "Is it still available?", "Ana", LINK)
+    assert "just been rented" in r.text and not r.needs_landlord
+    r = generate_reply(rented, [], "Hi", "Ana", LINK)
+    assert LINK not in r.text and "payslip" not in r.text
+
+
+def test_llm_first_contact_appends_missing_link(monkeypatch):
+    monkeypatch.setattr(config, "REPLY_ENGINE", "llm")
+    monkeypatch.setattr(llm, "complete", lambda s, u, known=None: "Hello Ana, yes it is free.")
+    r = generate_reply(PROP, [], "Hi", "Ana", LINK)
+    assert LINK in r.text and r.text.endswith("assistant.") and not r.needs_landlord

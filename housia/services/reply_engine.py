@@ -34,8 +34,12 @@ _TOPICS: list[tuple[str, tuple[str, ...], tuple[str, ...]]] = [
     ("pets", ("pet", "dog", "cat", "animal", "mascota"), ("pet", "dog", "cat", "animal")),
     ("furnished", ("furnish", "unfurnished", "amueblado"), ("furnish",)),
     ("deposit", ("deposit", "fianza", "bond"), ("deposit", "fianza")),
+    ("available_now", ("still available", "is it available", "is the room available",
+                       "is the flat available", "is the apartment available", "available?",
+                       "disponible", "sigue disponible"), ()),
     ("available", ("available from", "availability", "move in", "move-in", "start date",
-                   "when can i", "from when", "disponible"), ("available", "move-in", "move in")),
+                   "when can i", "from when", "disponible desde", "disponible a partir"),
+     ("available", "move-in", "move in")),
     ("stay", ("how long", "minimum stay", "min stay", "minimum", "duration", "length of",
               "long can", "months"), ("minimum", "stay", "month", "duration", "lease")),
     ("viewing", ("viewing", "visit", "see the", "see it", "show the", "tour"), ()),
@@ -56,6 +60,10 @@ def _quote(facts: str, words: tuple[str, ...]) -> str | None:
     return None
 
 
+def _is_available(prop: Mapping) -> bool:
+    return prop.get("contract_status") != "signed"
+
+
 def _first_contact(history: list[Mapping]) -> bool:
     return not any(m.get("direction") == "out" for m in history or [])
 
@@ -63,6 +71,14 @@ def _first_contact(history: list[Mapping]) -> bool:
 def _template(prop: Mapping, history: list[Mapping], incoming: str,
               contact_name: str, applicant_link: str) -> ReplyDecision:
     if _first_contact(history):
+        if not _is_available(prop):
+            text = (
+                f"Hello {contact_name},\n"
+                f"Thank you for your interest in \"{prop['title']}\". "
+                "Sorry, it has just been rented and is no longer available.\n"
+                f"{SIGNATURE}"
+            )
+            return ReplyDecision(text, False, "")
         kind = _TYPES.get(prop["rental_type"], prop["rental_type"])
         text = (
             f"Hello {contact_name},\n"
@@ -84,6 +100,9 @@ def _template(prop: Mapping, history: list[Mapping], incoming: str,
             answers.append(f"The rent is {prop['rent_eur']} EUR per month.")
         elif topic == "address":
             answers.append(f"The address is {prop['address']}, {prop['city']}.")
+        elif topic == "available_now":
+            answers.append("Yes, it is still available." if _is_available(prop)
+                           else "Sorry, it has just been rented.")
         elif topic == "viewing":
             answers.append(f"You can ask for a viewing here: {applicant_link}")
         elif topic == "documents":
@@ -116,6 +135,10 @@ _SYSTEM = (
     "- For the first message of a conversation: greet the person by name, give the rent, the "
     "rental type and the city, say which document is needed, and give the applicant link as the "
     "next step.\n"
+    "- The Availability line in the listing data is a known fact: a listed property is "
+    "available unless that line says otherwise.\n"
+    "- If the property is no longer available, say so politely in a first message and do not "
+    "ask for documents or give the applicant link.\n"
     "- For a viewing request, point to the applicant link.\n"
     "- Rental type 'residential' means long-term rental; 'temporary' means temporary rental.\n"
     "- Keep it short. Do not add a signature; it is added for you."
@@ -125,6 +148,8 @@ _SYSTEM = (
 def _llm(prop: Mapping, history: list[Mapping], incoming: str,
          contact_name: str, applicant_link: str) -> ReplyDecision:
     kind = _TYPES.get(prop["rental_type"], prop["rental_type"])
+    available = _is_available(prop)
+    first = _first_contact(history)
     convo = "\n".join(
         f"{'Landlord' if m.get('direction') == 'out' else 'Candidate'}: {m.get('body', '')}"
         for m in history or []
@@ -135,18 +160,28 @@ def _llm(prop: Mapping, history: list[Mapping], incoming: str,
         f"Rental type: {kind}\nRent: {prop['rent_eur']} EUR per month\n"
         f"Description: {prop.get('description', '')}\n"
         f"Facts: {prop.get('facts', '')}\n"
+        f"Availability: {'currently available' if available else 'no longer available (already rented)'}\n"
         f"Required document: {prop['required_document']}\n"
         f"Applicant link: {applicant_link}\n\n"
         f"Candidate name: {contact_name}\n\n"
         f"Conversation so far:\n{convo}\n\n"
         f"New message from the candidate:\n{incoming}\n"
     )
-    answer = (llm.complete(_SYSTEM, user, known={"NAME": contact_name}) or "").strip()
-    if not answer:
-        raise ValueError("empty model answer")
-    if "UNKNOWN" in answer:
+    try:
+        answer = (llm.complete(_SYSTEM, user, known={"NAME": contact_name}) or "").strip()
+    except Exception:
+        if first:
+            return _template(prop, history, incoming, contact_name, applicant_link)
+        raise
+    if not answer or "UNKNOWN" in answer:
+        if first:
+            return _template(prop, history, incoming, contact_name, applicant_link)
+        if not answer:
+            raise ValueError("empty model answer")
         text = f"Hello {contact_name},\n{HOLDING}\n{SIGNATURE}"
         return ReplyDecision(text, True, "The model could not answer from the listing data")
+    if first and available and applicant_link not in answer:
+        answer = f"{answer}\nYou can continue here: {applicant_link}"
     return ReplyDecision(f"{answer}\n{SIGNATURE}", False, "")
 
 
