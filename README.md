@@ -44,8 +44,8 @@ uv run pytest
 
 ## Reset the demo
 
-Open `/demo` and press "Reset", or send `POST /demo/reset`. This drops the database and loads
-the seed data again.
+Open the guide (`/guide`) and press "Reset demo" in its "Demo tools" box, or send
+`POST /demo/reset`. This drops the database and loads the seed data again.
 
 ## Public demo
 
@@ -68,7 +68,8 @@ Requests through the tunnel (they carry Cloudflare's forwarding headers):
 - **Public:** applicant pages and their forms (`/a/<token>...`, `/apply/<id>`, `/viewing/<token>`),
   `/static/...`, the favicon.
 - **Owner sign-in needed** (username `owner`, password `OWNER_PASSWORD`): everything else,
-  including the dashboard, property pages, `/demo` and its reset and clock, `/inbox`,
+  including the dashboard, property pages, the guide (`/guide`) with the demo clock and reset
+  (`POST /demo/clock`, `POST /demo/reset`), `/inbox`,
   `/worker/pause`, the CSV exports and the whole mock portal (`/mock/...`). Without
   `OWNER_PASSWORD` these answer 403. Signed-in form posts from another site are refused.
 - **Judge sign-in (optional, read-only):** set `JUDGE_PASSWORD` and sign in with username
@@ -85,7 +86,7 @@ Requests made directly on this machine (no forwarding headers) behave as before.
 
 **Private guest demos (optional).** Set `GUEST_LINK_CODE` (a long random code of letters,
 digits, `-` and `_`) and the script prints a `Guest link: <public address>/guest/<code>`. Each
-browser that opens it gets its own copy of the demo (a SQLite file in `instance/sandboxes/`,
+browser that opens it lands on the guide (`/guide`) and gets its own copy of the demo (a SQLite file in `instance/sandboxes/`,
 `SANDBOX_DIR`) and the owner's rights inside it: approve, invite, cancel, reset, move the demo
 clock, add a property. Nothing a guest does reaches other guests or the main database; their
 applicant pages (`/a/<token>`, `/apply/<id>`) in the same browser use their copy too, and the

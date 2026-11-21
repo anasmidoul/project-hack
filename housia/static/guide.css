@@ -1,4 +1,4 @@
-/* Built-in guidance: the /guide page, the "Start here" panel on /demo and the one-line page hints. */
+/* Built-in guidance: the /guide page (with its "Start here" panel and demo tools) and the one-line page hints. */
 
 /* One-line page hint (macro page_hint) */
 .page-hint { display:flex; align-items:flex-start; gap:9px; max-width:900px; margin:-14px 0 22px; padding:9px 12px; border:1px solid var(--line); border-radius:10px; color:var(--muted); background:var(--paper); font-size:12px; line-height:1.5; }
@@ -6,7 +6,7 @@
 .page-hint__more { color:#005db8; font-weight:600; white-space:nowrap; }
 .page-hint__more:hover { text-decoration:underline; }
 
-/* "Start here" panel on the demo page */
+/* "Start here" panel at the top of the guide */
 .guide-start { display:flex; align-items:center; justify-content:space-between; gap:20px; margin:0 0 26px; padding:18px 20px; border:1px solid #c9dcf3; border-radius:14px; background:var(--blue); }
 .guide-start .eyebrow { color:#005baa; }
 .guide-start p { margin:0 0 6px; }
@@ -36,6 +36,17 @@
 .guide-feature:target,.guide-step:target { border-color:#89b8ed; box-shadow:0 0 0 3px #e3ecfb; }
 .guide-real { display:grid; gap:10px; margin:0; padding-left:18px; font-size:13px; }
 .guide-real .simulation-badge { vertical-align:middle; }
+.guide-start a:not(.button),.guide-step p a,.guide-real a,.guide-tools__note a { color:#005db8; font-weight:600; }
+
+/* Demo tools on the guide: demo clock and reset */
+.guide-tools { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px 20px; margin-top:12px; padding:14px 18px; border:1px solid #dce7d5; border-radius:13px; background:#edf4e9; color:#516c4d; scroll-margin-top:80px; }
+.guide-tools:target { border-color:#89b8ed; box-shadow:0 0 0 3px #e3ecfb; }
+.guide-tools__clock { display:flex; align-items:center; gap:10px; }
+.guide-tools__clock h3 { margin:0 0 2px; color:var(--ink); font-size:16px; }
+.guide-tools__clock strong,.guide-tools__clock small { display:block; }
+.guide-tools__icon { display:grid; place-items:center; flex:none; width:28px; height:28px; border-radius:50%; color:#fff; background:#70926b; font-size:15px; }
+.guide-tools form { margin:0; }
+.guide-tools__note { flex-basis:100%; margin:0; font-size:12px; }
 
 @media (max-width: 720px) {
   .page-hint { margin-top:-10px; }
@@ -46,4 +57,6 @@
   .guide-step__n { width:26px; height:26px; font-size:12px; }
   .guide-step .button { white-space:normal; text-align:center; }
   .guide-features { grid-template-columns:1fr; }
+  .guide-tools { display:block; padding:14px; }
+  .guide-tools .inline-actions { margin:12px 0 10px; }
 }

@@ -4,7 +4,7 @@
 {% block content %}
 <section class="page-heading workspace-heading">
   <div><div class="eyebrow">Owner workspace</div><h1>Your rentals.</h1><p>Manage enquiries, replies and viewings for the homes you’ve already listed.</p></div>
-  <div class="inline-actions"><a class="button button--secondary" href="/demo">▶ Open demo</a><a class="button button--secondary" href="/guide">? How it works</a><a class="button button--primary" href="/properties/new">+ Add property</a></div>
+  <div class="inline-actions"><a class="button button--secondary" href="/guide">? How it works</a><a class="button button--primary" href="/properties/new">+ Add property</a></div>
 </section>
 {% set totals = namespace(enquiries=0, review=0) %}
 {% for prop in properties %}{% set totals.enquiries = totals.enquiries + prop.enquiries %}{% set totals.review = totals.review + prop.to_review %}{% endfor %}

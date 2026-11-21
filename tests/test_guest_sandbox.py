@@ -26,7 +26,7 @@ def guest_on(client, monkeypatch):
 
 def _join(browser):
     response = browser.get(f"/guest/{CODE}", headers=PUBLIC)
-    assert response.status_code == 302 and response.headers["Location"] == "/demo"
+    assert response.status_code == 302 and response.headers["Location"] == "/guide"
     with browser.session_transaction() as s:
         return s[sandbox.SESSION_KEY]
 
@@ -64,8 +64,12 @@ def test_guest_uses_owner_pages_through_tunnel(guest_on):
     main_before = _main_dump()
     page = guest_on.get("/", headers=PUBLIC)
     assert page.status_code == 200 and LABEL in page.get_data(as_text=True)
-    assert guest_on.get("/demo", headers=PUBLIC).status_code == 200
-    assert guest_on.post("/demo/clock", data={"minutes": "30"}, headers=SAME).status_code == 302
+    guide = guest_on.get("/guide", headers=PUBLIC)
+    assert guide.status_code == 200 and "This is your own copy of the demo" in guide.get_data(as_text=True)
+    assert guest_on.get("/demo", headers=PUBLIC).headers["Location"] == "/guide"
+    from_guide = {**SAME, "Referer": "https://localhost/guide"}
+    response = guest_on.post("/demo/clock", data={"minutes": "30"}, headers=from_guide)
+    assert response.status_code == 302 and response.headers["Location"] == "/guide"
     assert _clock(sandbox.path_for(sid)) == "30"
     assert db.db_path() == db.main_db_path()  # the request's choice does not outlive it
     # The same-origin rule still applies to guests.

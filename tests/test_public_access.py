@@ -6,7 +6,7 @@ from housia import config, db
 
 PUBLIC = {"Cf-Connecting-Ip": "203.0.113.5", "X-Forwarded-Proto": "https"}
 OWNER = ("owner", "correct-horse-battery")
-PROTECTED = ["/", "/demo", "/mock/inbox", "/properties/1/conversations/export.csv"]
+PROTECTED = ["/", "/guide", "/demo", "/mock/inbox", "/properties/1/conversations/export.csv"]
 
 
 @pytest.fixture
@@ -46,7 +46,9 @@ def test_public_applicant_pages_and_static_are_open(client, seeded, monkeypatch)
 def test_public_sign_in(client, seeded, monkeypatch):
     monkeypatch.setattr(config, "OWNER_PASSWORD", OWNER[1])
     assert client.get("/", headers=PUBLIC, auth=OWNER).status_code == 200
-    assert client.get("/demo", headers=PUBLIC, auth=OWNER).status_code == 200
+    assert client.get("/guide", headers=PUBLIC, auth=OWNER).status_code == 200
+    old = client.get("/demo", headers=PUBLIC, auth=OWNER)  # the old demo page: now the guide
+    assert old.status_code == 302 and old.headers["Location"] == "/guide"
     assert client.get("/", headers=PUBLIC, auth=("owner", "wrong")).status_code == 401
     # Signed-in form posts are accepted from this site only.
     same = {**PUBLIC, "Origin": "https://localhost"}
@@ -71,7 +73,7 @@ def test_public_without_password_configured_is_forbidden(client, seeded, monkeyp
 def test_local_requests_unchanged(client, seeded, monkeypatch):
     monkeypatch.setattr(config, "OWNER_PASSWORD", None)
     for path in PROTECTED:
-        assert client.get(path).status_code == 200, path
+        assert client.get(path).status_code == (302 if path == "/demo" else 200), path
     monkeypatch.setattr(config, "OWNER_PASSWORD", OWNER[1])
     assert client.get("/").status_code == 401
     assert client.get("/", auth=OWNER).status_code == 200
@@ -106,9 +108,10 @@ def _dump():
 
 
 def test_judge_can_read_owner_pages(client, judge_on):
-    for path in ["/", "/properties/1", "/properties/1/conversations", "/demo", "/mock/inbox"]:
+    for path in ["/", "/properties/1", "/properties/1/conversations", "/guide", "/mock/inbox"]:
         assert client.get(path, headers=PUBLIC, auth=JUDGE).status_code == 200, path
         assert client.head(path, headers=PUBLIC, auth=JUDGE).status_code == 200, path
+    assert client.get("/demo", headers=PUBLIC, auth=JUDGE).headers["Location"] == "/guide"
 
 
 def test_judge_changes_are_refused(client, judge_on):
@@ -131,6 +134,11 @@ def test_judge_changes_are_refused(client, judge_on):
     assert response.headers["Location"] == "/properties/1?tab=x"
     evil = {**PUBLIC, "Referer": "https://evil.example/x"}
     assert client.post("/demo/reset", headers=evil, auth=JUDGE).headers["Location"] == "/"
+    # The demo tools on the guide are refused too, and lead back to the guide.
+    from_guide = {**PUBLIC, "Referer": "https://localhost/guide"}
+    for path, data in [("/demo/clock", {"minutes": "30"}), ("/demo/reset", {})]:
+        response = client.post(path, data=data, headers=from_guide, auth=JUDGE)
+        assert response.status_code == 303 and response.headers["Location"] == "/guide", path
     assert _dump() == before
     page = client.get("/", headers=PUBLIC, auth=JUDGE).get_data(as_text=True)
     assert READ_ONLY in page

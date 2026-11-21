@@ -5,7 +5,7 @@ Contract: DESIGN.md section 9.
 
 from flask import Blueprint, flash, redirect, render_template, request
 
-from housia import core, db
+from housia import back_url, core, db
 
 bp = Blueprint("demo", __name__)
 
@@ -26,20 +26,8 @@ def inbox():
 
 @bp.get("/demo")
 def page():
-    selected = request.args.get("as", "")
-    with db.tx() as conn:
-        rows = conn.execute(
-            "SELECT a.*,p.title AS property_title FROM applications a "
-            "JOIN properties p ON p.id=a.property_id ORDER BY a.created_at,a.id"
-        ).fetchall()
-        tokens = {row["token"] for row in rows}
-        if selected not in tokens:
-            selected = rows[0]["token"] if rows else ""
-    return render_template(
-        "demo.html",
-        applications=rows,
-        selected_token=selected,
-    )
+    """The old demo room. Its tools (clock, reset) are on the guide now; old links go there."""
+    return redirect("/guide")
 
 
 @bp.post("/inbox/read-all")
@@ -47,7 +35,7 @@ def read_all():
     with db.tx() as conn:
         conn.execute("UPDATE notifications SET is_read=1 WHERE application_id IS NULL")
     flash("Landlord notifications marked as read.", "ok")
-    return redirect("/inbox")
+    return redirect(back_url("/guide"))
 
 
 @bp.post("/demo/clock")
@@ -62,11 +50,11 @@ def clock():
         flash(f"Demo clock advanced by {minutes} minutes.", "ok")
     except ValueError:
         flash("Enter a whole number of minutes between -1440 and 1440.", "error")
-    return redirect("/demo")
+    return redirect(back_url("/guide"))
 
 
 @bp.post("/demo/reset")
 def reset():
     db.reset_db()
     flash("Demo data reset.", "ok")
-    return redirect("/demo")
+    return redirect(back_url("/guide"))

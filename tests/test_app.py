@@ -13,7 +13,7 @@ GET_ROUTES = [
     "/properties/1/conversations",
     "/conversations/1",
     "/inbox",
-    "/demo",
+    "/guide",
     "/apply/1",
     "/a/x",
     "/mock/inbox",
@@ -46,9 +46,16 @@ def test_dt_filter(client):
     assert dt(None) == ""
 
 
-def test_dashboard_links_to_the_demo_page(client):
+def test_old_demo_page_redirects_to_guide(client):
+    response = client.get("/demo")
+    assert response.status_code == 302 and response.headers["Location"] == "/guide"
+    assert client.get("/demo?as=demo-1-01").headers["Location"] == "/guide"
+
+
+def test_dashboard_has_no_demo_link(client):
     html = client.get("/").get_data(as_text=True)
-    assert 'href="/demo"' in html and "Open demo" in html
+    assert 'href="/demo"' not in html and "Open demo" not in html
+    assert 'href="/guide"' in html and "How it works" in html
 
 
 def test_dashboard_shows_new_logo_and_photos(client):

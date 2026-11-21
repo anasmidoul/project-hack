@@ -144,7 +144,7 @@ echo
 echo "HOUSIA public demo is running."
 echo "  Public address:   ${PUBLIC_URL}"
 echo "  Applicant page:   ${PUBLIC_URL}/apply/1   (personal links: ${PUBLIC_URL}/a/<token>)"
-echo "  Owner pages:      ${PUBLIC_URL}/demo   (sign in as 'owner' with OWNER_PASSWORD)"
+echo "  Owner pages:      ${PUBLIC_URL}/guide   (sign in as 'owner' with OWNER_PASSWORD; the guide has the demo clock and reset)"
 if [[ "$has_judge" == "yes" ]]; then
   echo "  Judge login:      available, read-only (sign in as 'judge' with JUDGE_PASSWORD)"
 fi

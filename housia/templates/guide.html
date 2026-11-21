@@ -25,7 +25,8 @@
 {% set second_wait = relay.waiting[1] if relay and relay.waiting|length > 1 else None %}
 {% set eval_prop = (properties|selectattr('eval_mode', 'equalto', 'assisted')|first) or (properties|first) %}
 {% set eval_href = '/properties/%d/evaluation' % eval_prop.id if eval_prop else '/' %}
-<section class="page-heading"><div><div class="eyebrow">How it works</div><h1>What HOUSIA does, and how to try it.</h1><p class="guide-intro">HOUSIA is an assistant for a landlord who is renting out a home. It answers the messages a listing receives on a rental portal, collects and checks each candidate’s document, runs the viewing calendar and its waiting list, and follows the chosen candidate to a signed contract.</p></div><div class="inline-actions">{{ button('Open demo room', 'secondary', href='/demo') }}{{ button('Start step 1', 'primary', href='#try') }}</div></section>
+<section class="guide-start" aria-labelledby="start-here"><div><div class="eyebrow" id="start-here">Start here</div><p><strong>This is a working demo of HOUSIA, an assistant for a landlord who is renting out a home.</strong> All people and documents are fictional.</p><ul>{% if viewer_role == 'guest' %}<li>This is your own copy of the demo. Only you see what you change.</li>{% endif %}<li>To begin, follow the nine steps below in order. Each step has buttons that open the right page.</li><li>The demo clock and “Reset demo” are in <a href="#tools">Demo tools</a>, after step 9.</li></ul></div><div class="guide-start__actions">{{ button('Start step 1 →', 'primary', href='#step-1') }}</div></section>
+<section class="page-heading"><div><div class="eyebrow">How it works</div><h1>What HOUSIA does, and how to try it.</h1><p class="guide-intro">HOUSIA is an assistant for a landlord who is renting out a home. It answers the messages a listing receives on a rental portal, collects and checks each candidate’s document, runs the viewing calendar and its waiting list, and follows the chosen candidate to a signed contract.</p></div><div class="inline-actions">{{ button('Demo tools', 'secondary', href='#tools') }}{{ button('Start step 1', 'primary', href='#try') }}</div></section>
 {% if viewer_role == 'judge' %}<p class="guide-note">You are signed in read-only. You can write as a candidate in Portalia and open every page, but buttons that change data are refused.</p>{% endif %}
 
 <section class="guide-section" id="try">
@@ -42,7 +43,7 @@
       <div class="inline-actions">{{ button('Landlord conversations', 'primary', href=conv_href) }}{{ button('Notifications', 'secondary', href='/inbox') }}</div>
     {% endcall %}
     {% call step(3, 'Open a candidate’s personal page') %}
-      <p>Open the page of {{ cand_name }}, as they would on their phone.</p>
+      <p>Open the page of {{ cand_name }}, as they would on their phone. The link “Back to the guide” at the top of that page brings you back here.</p>
       <p class="guide-step__result"><strong>What happens:</strong> no account or password, just a private link. It shows the steps: details, document, viewing.</p>
       <div class="inline-actions">{{ button(cand_first ~ '’s page', 'primary', href=cand_page) }}</div>
     {% endcall %}
@@ -62,9 +63,9 @@
       <div class="inline-actions">{{ button(cand_first ~ '’s page', 'primary', href=cand_page) }}{{ button('Schedule', 'secondary', href=cand_schedule) }}</div>
     {% endcall %}
     {% call step(7, 'Cancel a viewing and watch the waiting list') %}
-      <p>Open the schedule and press “Cancel booking” on {% if booked %}{{ booked.name }}’s viewing{% else %}the viewing that has a waiting list{% endif %}{% if first_wait and second_wait %} ({{ first_wait.name }} and {{ second_wait.name }} are waiting){% endif %}. Then, in the demo room, press “+30 min” to move the demo clock forward.</p>
+      <p>Open the schedule and press “Cancel booking” on {% if booked %}{{ booked.name }}’s viewing{% else %}the viewing that has a waiting list{% endif %}{% if first_wait and second_wait %} ({{ first_wait.name }} and {{ second_wait.name }} are waiting){% endif %}. Then come back here and press “+30 min” in <a href="#tools">Demo tools</a>, below step 9, to move the demo clock forward.</p>
       <p class="guide-step__result"><strong>What happens:</strong> the time is offered to {{ first_wait.name if first_wait else 'the first person waiting' }} for 30 minutes. When the clock passes that, the offer moves to {{ second_wait.name if second_wait else 'the next person' }}, who can accept it on their page.</p>
-      <div class="inline-actions">{{ button('Schedule with waiting list', 'primary', href=relay_schedule) }}{% if first_wait %}{{ button(first_wait.name.split(' ')[0] ~ '’s page', 'secondary', href='/a/' ~ first_wait.token) }}{% endif %}{{ button('Demo room (+30 min)', 'secondary', href='/demo') }}{% if second_wait %}{{ button(second_wait.name.split(' ')[0] ~ '’s page', 'secondary', href='/a/' ~ second_wait.token) }}{% endif %}</div>
+      <div class="inline-actions">{{ button('Schedule with waiting list', 'primary', href=relay_schedule) }}{% if first_wait %}{{ button(first_wait.name.split(' ')[0] ~ '’s page', 'secondary', href='/a/' ~ first_wait.token) }}{% endif %}{{ button('Demo tools (+30 min)', 'secondary', href='#tools') }}{% if second_wait %}{{ button(second_wait.name.split(' ')[0] ~ '’s page', 'secondary', href='/a/' ~ second_wait.token) }}{% endif %}</div>
     {% endcall %}
     {% call step(8, 'Finish: attendance, final candidate, contract') %}
       <p>On the schedule press “Mark attended” on {{ cand_first }}’s viewing. On the contract page select {{ cand_first }}, then press “Mark pending”, “Mark sent”, and attach the signed demo file.</p>
@@ -72,11 +73,12 @@
       <div class="inline-actions">{{ button('Schedule', 'primary', href=cand_schedule) }}{{ button('Contract', 'secondary', href=cand_contract) }}</div>
     {% endcall %}
     {% call step(9, 'Reset') %}
-      <p>In the demo room press “Reset demo”.</p>
+      <p>In <a href="#tools">Demo tools</a>, just below, press “Reset demo”.</p>
       <p class="guide-step__result"><strong>What happens:</strong> all data goes back to the starting state, {% if viewer_role == 'guest' %}in your private copy only. Other visitors are not affected.{% else %}for everyone using this demo.{% endif %}</p>
-      <div class="inline-actions">{{ button('Demo room', 'primary', href='/demo') }}</div>
+      <div class="inline-actions">{{ button('Demo tools', 'primary', href='#tools') }}</div>
     {% endcall %}
   </ol>
+  <section class="guide-tools" id="tools" aria-labelledby="tools-title"><div class="guide-tools__clock"><span class="guide-tools__icon" aria-hidden="true">◷</span><div><h3 id="tools-title">Demo tools</h3><strong>Demo time: {{ now|dt }}</strong><small>{{ clock_offset_min|default(0) }} minute{{ '' if clock_offset_min|default(0) == 1 else 's' }} from real time</small></div></div><div class="inline-actions"><form method="post" action="/demo/clock#tools"><input type="hidden" name="minutes" value="10">{{ button('+10 min', 'secondary', type='submit') }}</form><form method="post" action="/demo/clock#tools"><input type="hidden" name="minutes" value="30">{{ button('+30 min', 'secondary', type='submit') }}</form><form method="post" action="/demo/reset#tools">{{ button('Reset demo', 'danger', type='submit') }}</form></div><p class="guide-tools__note">The clock moves time forward only inside the demo (step 7). “Reset demo” puts all data back to the starting state (step 9){% if viewer_role == 'guest' %}, in your copy only{% endif %}.{% if viewer_role == 'judge' %} These buttons are refused for the read-only login.{% endif %}</p></section>
 </section>
 
 <section class="guide-section" id="features">
@@ -99,7 +101,7 @@
     <li><strong>Real:</strong> the AI replies and the AI document checks. They need the AI model to be set up on the server; without it, HOUSIA uses fixed template replies and skips the check.</li>
     <li><strong>Stand-in:</strong> the rental portal. “Portalia” is a small copy made for this demo. The same automation also drives a real portal inbox through a browser; that is not part of the public demo.</li>
     <li><strong>Fictional:</strong> all people and all documents.</li>
-    <li><strong>Simulated:</strong> the ranking is a simple rule, labelled {{ simulation_badge() }}. The demo clock (“+10 min”, “+30 min”) moves time forward only inside the demo.</li>
+    <li><strong>Simulated:</strong> the ranking is a simple rule, labelled {{ simulation_badge() }}. The demo clock (“+10 min”, “+30 min” in <a href="#tools">Demo tools</a>) moves time forward only inside the demo.</li>
     <li><strong>Background work:</strong> portal messages are read and answered by a separate process that checks about every 20 seconds, so replies are not instant.</li>
   </ul></div></article>
 </section>

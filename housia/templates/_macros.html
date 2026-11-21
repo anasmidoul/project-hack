@@ -1,7 +1,7 @@
 {#
   Shared UI primitives:
   button (primary/secondary/quiet/danger), status_badge, simulation_badge,
-  flash_messages, property_tabs, phone_frame, empty_state and page_hint.
+  flash_messages, property_tabs, empty_state and page_hint.
   All landlord templates use these so interaction states stay consistent.
 #}
 
@@ -74,13 +74,6 @@
     <p>{{ detail }}</p>
     {% if action_label and action_href %}{{ button(action_label, 'secondary', href=action_href) }}{% endif %}
   </div>
-{%- endmacro %}
-
-{% macro phone_frame(url, title='Applicant experience') -%}
-  <section class="phone-preview" aria-label="{{ title }}">
-    <div class="phone-preview__top"><span></span></div>
-    <iframe title="{{ title }}" src="{{ url }}"></iframe>
-  </section>
 {%- endmacro %}
 
 {% macro page_hint(text, guide_anchor=None) -%}

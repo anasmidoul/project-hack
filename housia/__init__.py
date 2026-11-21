@@ -48,6 +48,19 @@ def _is_https(req) -> bool:
     return is_public_request(req) and req.headers.get("X-Forwarded-Proto", "").lower() == "https"
 
 
+def _site_hosts() -> set[str]:
+    return {request.host.lower(), config.BASE_URL.split("://", 1)[-1].rstrip("/").lower()}
+
+
+def back_url(default: str = "/") -> str:
+    """The page the request came from when it is on this site (path only), else `default`."""
+    parts = urlsplit(request.headers.get("Referer", ""))
+    if parts.scheme in ("http", "https") and parts.netloc.lower() in _site_hosts():
+        if parts.path.startswith("/") and not parts.path.startswith(("//", "/\\")):
+            return parts.path + (f"?{parts.query}" if parts.query else "")
+    return default
+
+
 class _SessionInterface(SecureCookieSessionInterface):
     """Session cookie marked Secure only on https requests (the tunnel), so plain-http
     localhost keeps working."""
@@ -116,9 +129,6 @@ def create_app() -> Flask:
         host = origin.split("://", 1)[-1].rstrip("/").lower()
         return host in _site_hosts()
 
-    def _site_hosts() -> set[str]:
-        return {request.host.lower(), config.BASE_URL.split("://", 1)[-1].rstrip("/").lower()}
-
     def signed_in_role() -> str | None:
         """'owner' or 'judge' from this request's Basic credentials, else None.
 
@@ -144,14 +154,6 @@ def create_app() -> Flask:
         if is_judge:
             return "judge"
         return None
-
-    def _back_url() -> str:
-        """The page the request came from when it is on this site (path only), else '/'."""
-        parts = urlsplit(request.headers.get("Referer", ""))
-        if parts.scheme in ("http", "https") and parts.netloc.lower() in _site_hosts():
-            path = parts.path if parts.path.startswith("/") and not parts.path.startswith("//") else "/"
-            return path + (f"?{parts.query}" if parts.query else "")
-        return "/"
 
     def _guest_sandbox_path():
         """The sandbox file for this browser's guest session, or None when it is not a guest.
@@ -195,7 +197,7 @@ def create_app() -> Flask:
 
     @app.get("/guest/<code>", endpoint="guest_link")
     def guest_link(code):
-        """Private guest demo: a new sandbox for this browser (or its current one), then /demo."""
+        """Private guest demo: a new sandbox for this browser (or its current one), then /guide."""
         expected = (config.GUEST_LINK_CODE or "").encode()
         if not (secrets.compare_digest(code.encode(), expected)
                 and sandbox.guest_enabled(app.secret_key)):
@@ -206,7 +208,7 @@ def create_app() -> Flask:
                 session[sandbox.SESSION_KEY] = sandbox.create()
             except sandbox.SandboxFull:
                 return _demo_full()
-        return redirect("/demo")
+        return redirect("/guide")
 
     @app.before_request
     def protect_workspace():
@@ -243,7 +245,7 @@ def create_app() -> Flask:
             if (role == "judge" and request.method not in ("GET", "HEAD")
                     and endpoint not in JUDGE_ALLOWED_POSTS):
                 flash(READ_ONLY_MESSAGE, "error")
-                return redirect(_back_url(), 303)
+                return redirect(back_url(), 303)
         protected_form = endpoint.startswith(("workspace.", "properties.")) or endpoint == "demo.read_all"
         if protected_form and request.method == "POST":
             request.max_content_length = 2_100_000

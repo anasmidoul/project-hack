@@ -2,6 +2,7 @@
 {% from '_macros.html' import button, status_badge, empty_state %}
 {% block title %}Your application · HOUSIA{% endblock %}
 {% block content %}
+  {% if viewer_role in ['guest', 'owner', 'judge'] %}<p class="applicant-guide-link" style="margin:0 0 12px;font-size:12px"><a href="/guide" style="color:#005db8">← Back to the guide</a></p>{% endif %}
   {% if application and property %}
   <section class="applicant-header"><div><div class="eyebrow">Your application</div><h1>{{ property.title }}</h1><p>{{ property.city }} · €{{ property.rent_eur }} / month</p></div>{{ status_badge(application.status) }}</section>
   <div class="progress-line"><span class="{% if application.status != 'new' %}is-done{% endif %}">1<small>Details</small></span><i class="{% if application.status not in ['new','docs_requested','docs_correction'] %}is-done{% endif %}"></i><span class="{% if application.calendar_access %}is-done{% endif %}">2<small>Document</small></span><i class="{% if application.calendar_access %}is-done{% endif %}"></i><span class="{% if application.status in ['booked','attended','finalist','completed'] %}is-done{% endif %}">3<small>Viewing</small></span></div>
