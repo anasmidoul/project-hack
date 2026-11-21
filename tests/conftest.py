@@ -19,6 +19,7 @@ def isolated_config(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://localhost:5000")
     monkeypatch.setattr(config, "DEMO_EXTRA_FILE", "")
     monkeypatch.setattr(config, "OWNER_PASSWORD", None)
+    monkeypatch.setattr(config, "JUDGE_PASSWORD", None)
     monkeypatch.setattr(config, "SECRET_KEY", "test-secret-key")
 
 

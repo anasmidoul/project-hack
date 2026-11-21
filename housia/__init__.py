@@ -188,7 +188,10 @@ def create_app() -> Flask:
     def private_pages(response):
         if request.endpoint != "static":
             response.headers["Cache-Control"] = "no-store"
-            response.headers["Referrer-Policy"] = "no-referrer"
+            # "same-origin": other sites never learn our URLs (applicant links hold a token), while
+            # our own form posts still carry a real Origin header. With "no-referrer" browsers send
+            # "Origin: null" on form posts, which the cross-site check below would refuse.
+            response.headers["Referrer-Policy"] = "same-origin"
         return response
 
     @app.before_request

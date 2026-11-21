@@ -180,3 +180,17 @@ def test_judge_rules_apply_locally_and_applicant_pages_stay_open(client, judge_o
     assert client.get(f"/a/{judge_on}", headers=PUBLIC).status_code == 200
     assert client.get("/apply/1", headers=PUBLIC).status_code == 200
     assert client.get("/static/favicon.svg", headers=PUBLIC).status_code == 200
+
+
+def test_form_posts_from_a_real_browser_are_not_refused(client, monkeypatch):
+    """Browsers send `Origin: null` on form posts when the page says `Referrer-Policy: no-referrer`.
+    The pages must use `same-origin`, and a null origin stays refused as a cross-site post."""
+    monkeypatch.setattr(config, "OWNER_PASSWORD", "owner-pass-for-test")
+    public = {"Cf-Connecting-Ip": "203.0.113.5", "X-Forwarded-Proto": "https"}
+    page = client.get("/apply/1", headers=public)
+    assert page.headers.get("Referrer-Policy", "same-origin") == "same-origin"
+    refused = client.post("/apply/1", data={"name": "Test Person"}, headers={**public, "Origin": "null"})
+    assert refused.status_code == 403
+    own = "https://" + page.request.host
+    accepted = client.post("/apply/1", data={"name": "Test Person"}, headers={**public, "Origin": own})
+    assert accepted.status_code in (302, 303)
