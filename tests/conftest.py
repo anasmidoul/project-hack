@@ -18,6 +18,8 @@ def isolated_config(monkeypatch):
     monkeypatch.setattr(config, "IDEALISTA_INBOX_URL", "http://localhost:5000/mock/inbox")
     monkeypatch.setattr(config, "BASE_URL", "http://localhost:5000")
     monkeypatch.setattr(config, "DEMO_EXTRA_FILE", "")
+    monkeypatch.setattr(config, "OWNER_PASSWORD", None)
+    monkeypatch.setattr(config, "SECRET_KEY", "test-secret-key")
 
 
 @pytest.fixture
