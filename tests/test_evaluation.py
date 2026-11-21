@@ -14,7 +14,8 @@ def _app_ids(conn, property_id):
 def test_rank_scores_and_tie_breaks_by_submission_time(conn, t0):
     seed.run(conn, t0)
     ranked = evaluation.rank(conn, 1, t0)
-    assert [item.score for item in ranked] == [2, 2, 0]
+    # Third applicant is available at weekends and one free slot is on a Saturday.
+    assert [item.score for item in ranked] == [2, 2, 1]
     assert ranked[0].name == "Dani López"
     assert ranked[1].name == "Eva Torres"
     assert ranked[0].position == 1

@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from flask import Flask, request
+from flask import Flask, flash, redirect, request
 
 from housia import config, core, db
 
@@ -49,6 +49,15 @@ def create_app() -> Flask:
         with db.tx() as conn:
             scheduling.tick(conn, core.now(conn))
         return None
+
+    @app.errorhandler(core.DomainError)
+    def domain_error(error):
+        """A rule was broken outside a route's own try block, usually a missing record on a GET page.
+        Show the message on the dashboard instead of a 500 page."""
+        if request.path == "/":
+            return str(error), 500
+        flash(str(error), "error")
+        return redirect("/")
 
     @app.template_filter("dt")
     def format_dt(value, fmt="%a %d %b, %H:%M"):

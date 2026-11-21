@@ -33,9 +33,10 @@ def test_app_is_created(client):
 
 @pytest.mark.parametrize("path", GET_ROUTES)
 def test_get_route_responds(client, path):
-    """Every page answers. On an empty database a page for one record may be 404, never 500."""
+    """Every page answers. On an empty database a page for one record may be 404 or a redirect
+    with a message, never 500."""
     response = client.get(path)
-    allowed = (200, 404) if any(ch.isdigit() for ch in path) or path == "/a/x" else (200,)
+    allowed = (200, 302, 404) if any(ch.isdigit() for ch in path) or path == "/a/x" else (200,)
     assert response.status_code in allowed, f"{path} -> {response.status_code}"
 
 
