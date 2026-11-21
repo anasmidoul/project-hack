@@ -1,10 +1,12 @@
 {% extends 'base.html' %}
-{% from '_macros.html' import button, status_badge %}
+{% from '_macros.html' import button, status_badge, page_hint %}
 {% block title %}{{ application.name if application else 'Application' }} · HOUSIA{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/guide.css">{% endblock %}
 {% block breadcrumb %}<span class="crumb">Applications / <strong>{{ application.name if application else 'Application' }}</strong></span>{% endblock %}
 {% block content %}
   {% if application and property %}
   <section class="page-heading"><div><div class="eyebrow">{{ property.title }}</div><h1>{{ application.name }}</h1><p>{{ application.email or 'No email supplied' }}{% if application.phone %} · {{ application.phone }}{% endif %}</p></div><div class="inline-actions">{{ status_badge(application.status) }}{% if conversation %}{{ button('Open conversation', 'secondary', href='/conversations/' ~ conversation.id) }}{% endif %}</div></section>
+  {{ page_hint('One candidate: their details, their document with the AI check, and the accept or decline message. Try “Open applicant view” to see the page the candidate uses.', 'f-documents') }}
   <div class="split-grid">
     <section class="stack">
       <article class="card"><div class="card__header"><div><h2>Application details</h2><small>Submitted via {{ application.source|title }}.</small></div></div><div class="card__body"><dl class="info-list"><div class="info-list__row"><dt>Viewing availability</dt><dd>{{ application.availability|replace(',', ' · ') or 'Not specified' }}</dd></div><div class="info-list__row"><dt>Preferences</dt><dd>{{ application.preferences or 'No extra preferences shared.' }}</dd></div><div class="info-list__row"><dt>Applied</dt><dd>{{ application.created_at }}</dd></div></dl></div></article>

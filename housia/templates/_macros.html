@@ -1,7 +1,7 @@
 {#
   Shared UI primitives:
   button (primary/secondary/quiet/danger), status_badge, simulation_badge,
-  flash_messages, property_tabs, phone_frame and empty_state.
+  flash_messages, property_tabs, phone_frame, empty_state and page_hint.
   All landlord templates use these so interaction states stay consistent.
 #}
 
@@ -81,4 +81,8 @@
     <div class="phone-preview__top"><span></span></div>
     <iframe title="{{ title }}" src="{{ url }}"></iframe>
   </section>
+{%- endmacro %}
+
+{% macro page_hint(text, guide_anchor=None) -%}
+  <p class="page-hint"><span class="page-hint__mark" aria-hidden="true">?</span><span>{{ text }}{% if guide_anchor %} <a class="page-hint__more" href="/guide#{{ guide_anchor }}">More in the guide</a>{% endif %}</span></p>
 {%- endmacro %}
