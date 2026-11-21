@@ -47,6 +47,33 @@ uv run pytest
 Open `/demo` and press "Reset", or send `POST /demo/reset`. This drops the database and loads
 the seed data again.
 
+## Public demo
+
+Shows the app on a public https address through a free Cloudflare quick tunnel (no account),
+so judges can open applicant links on their phones. Needs `cloudflared` on `PATH` (binary from
+Cloudflare's GitHub releases, for example in `~/.local/bin`) and `OWNER_PASSWORD` (in `.env` or
+the environment).
+
+```bash
+scripts/demo_public.sh              # tunnel + app + worker
+scripts/demo_public.sh --no-worker  # tunnel + app only
+```
+
+It prints the public address. Links sent to applicants use it (`BASE_URL`). It always uses the
+mock portal (`CHANNEL=mock`; any other channel is refused) and `instance/demo.db` unless
+`HOUSIA_DB` is set (a missing database is seeded). Logs go to `instance/demo-*.log`. Press
+Ctrl-C to stop the tunnel, the app and the worker.
+
+Requests through the tunnel (they carry Cloudflare's forwarding headers):
+- **Public:** applicant pages and their forms (`/a/<token>...`, `/apply/<id>`, `/viewing/<token>`),
+  `/static/...`, the favicon.
+- **Owner sign-in needed** (username `owner`, password `OWNER_PASSWORD`): everything else,
+  including the dashboard, property pages, `/demo` and its reset and clock, `/inbox`,
+  `/worker/pause`, the CSV exports and the whole mock portal (`/mock/...`). Without
+  `OWNER_PASSWORD` these answer 403. Signed-in form posts from another site are refused.
+
+Requests made directly on this machine (no forwarding headers) behave as before.
+
 ## Owner workspace (imported enquiries)
 
 On each property page (steps Import, Screen, Reply, Viewings). For listings whose enquiries arrive outside HOUSIA; independent of the worker.
