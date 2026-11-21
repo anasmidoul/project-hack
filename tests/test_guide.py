@@ -53,7 +53,7 @@ def test_guide_falls_back_to_dashboard_without_data(client):
 def test_demo_page_keeps_frames_and_links_to_guide(client):
     client.post("/demo/reset")
     html = client.get("/demo").get_data(as_text=True)
-    assert 'class="rental-animation"' in html and "rental_animation.css" in html
+    assert "rental-animation" not in html and "rental_animation" not in html  # the animation was removed
     assert 'title="Landlord workspace"' in html and 'title="Applicant experience"' in html
     assert 'class="guide-start"' in html and 'href="/guide"' in html
     assert html.index('class="guide-start"') < html.index('title="Landlord workspace"')
