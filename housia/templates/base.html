@@ -1,46 +1,54 @@
+{% from '_macros.html' import flash_messages %}
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% block title %}HOUSIA{% endblock %} - HOUSIA</title>
-<link rel="stylesheet" href="/static/style.css">
-{% block head %}{% endblock %}
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}HOUSIA{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='workspace.css') }}">
+  {% block head %}{% endblock %}
 </head>
-<body>
-<header class="topbar">
-  <a class="brand" href="/">HOUSIA</a>
-  <nav class="topnav">
-    <a href="/demo">Demo</a>
-    <a href="/inbox">Inbox ({{ unread_count|default(0) }})</a>
-    <a href="/mock/inbox">Mock portal</a>
-  </nav>
-  <div class="topbar-tools">
-    <span class="clock">Simulated time: {{ now|default("") }}{% if clock_offset_min %} ({{ clock_offset_min }} min offset){% endif %}</span>
-    <form method="post" action="/demo/clock" class="inline">
-      <input type="hidden" name="minutes" value="10">
-      <button type="submit">+10 min</button>
-    </form>
-    <form method="post" action="/demo/clock" class="inline">
-      <input type="hidden" name="minutes" value="30">
-      <button type="submit">+30 min</button>
-    </form>
-    <form method="post" action="/demo/reset" class="inline">
-      <button type="submit">Reset demo</button>
-    </form>
+<body class="app-shell">
+  <aside class="sidebar">
+    <a href="/" class="brand" aria-label="HOUSIA home">
+      <span class="brand__mark">h</span><span>HOUSIA</span>
+    </a>
+    <span class="sidebar__eyebrow">LANDLORD SPACE</span>
+    <nav class="sidebar-nav" aria-label="Main navigation">
+      <a class="sidebar-nav__item {% if request.path == '/' %}is-active{% endif %}" href="/">
+        <span aria-hidden="true">⌂</span> Dashboard
+      </a>
+      <a class="sidebar-nav__item {% if request.path == '/properties/new' %}is-active{% endif %}" href="/properties/new">
+        <span aria-hidden="true">+</span> Add property
+      </a>
+      <a class="sidebar-nav__item {% if request.path == '/inbox' %}is-active{% endif %}" href="/inbox">
+        <span aria-hidden="true">◌</span> Notifications
+        {% if unread_count|default(0) %}<b>{{ unread_count }}</b>{% endif %}
+      </a>
+
+    </nav>
+    <div class="sidebar__properties">
+      <span class="sidebar__eyebrow">YOUR PROPERTIES</span>
+      {% for nav_property in nav_properties|default([]) %}
+        <a href="/properties/{{ nav_property.id }}" class="property-link {% if property is defined and property.id == nav_property.id %}is-current{% endif %}">
+          <span class="property-link__dot"></span>{{ nav_property.title }}
+        </a>
+      {% endfor %}
+    </div>
+    <div class="sidebar__bottom"><div class="sidebar__person"><span class="avatar avatar--small">H</span><span><strong>Owner workspace</strong><small>HOUSIA</small></span></div></div>
+  </aside>
+  <div class="app-content">
+    <header class="topbar">
+      <div>{% block breadcrumb %}<span class="crumb">Dashboard</span>{% endblock %}</div>
+      <div class="topbar__actions">
+        <a href="/inbox" class="notification-button" aria-label="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>{% if unread_count|default(0) %}<b>{{ unread_count }}</b>{% endif %}</a>
+      </div>
+    </header>
+    <main class="page-content">
+      {{ flash_messages() }}
+      {% block content %}{% endblock %}
+    </main>
   </div>
-</header>
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-<div class="flashes">
-  {% for category, message in messages %}
-  <div class="flash {{ category }}">{{ message }}</div>
-  {% endfor %}
-</div>
-{% endif %}
-{% endwith %}
-<main class="container">
-{% block content %}{% endblock %}
-</main>
 </body>
 </html>

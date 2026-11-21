@@ -1,13 +1,19 @@
-{% extends "base.html" %}
-{% block title %}Contract{% endblock %}
+{% extends 'base.html' %}
+{% from '_macros.html' import button, property_tabs, status_badge, empty_state %}
+{% block title %}Contract · {{ property.title if property else 'Property' }} · HOUSIA{% endblock %}
+{% block breadcrumb %}<span class="crumb">Properties / {{ property.title if property else 'Property' }} / <strong>Contract</strong></span>{% endblock %}
 {% block content %}
-<h1>Contract</h1>
-<p>Placeholder page. Template unit: C4.</p>
-<p>Context variables:</p>
-<ul>
-  <li>property</li>
-  <li>attended</li>
-  <li>finalist</li>
-  <li>contract_files</li>
-</ul>
+  {% if property %}
+  <section class="page-heading"><div><div class="eyebrow">{{ property.title }}</div><h1>Final candidate & contract</h1><p>Choose from attended viewings, then track the contract to signature.</p></div>{{ status_badge(property.contract_status) }}</section>
+  {{ property_tabs(property, 'contract') }}
+  <div class="contract-steps"><div class="contract-step {% if property.contract_status in ['pending','sent','signed'] %}is-done{% endif %}"><b>1</b><span>Choose finalist</span></div><i></i><div class="contract-step {% if property.contract_status in ['sent','signed'] %}is-done{% endif %}"><b>2</b><span>Send contract</span></div><i></i><div class="contract-step {% if property.contract_status == 'signed' %}is-done{% endif %}"><b>3</b><span>Signed</span></div></div>
+  <div class="split-grid">
+    <section class="stack"><article class="card"><div class="card__header"><div><h2>{% if finalist %}Selected finalist{% else %}People who attended{% endif %}</h2><small>{% if finalist %}This applicant has been selected for the property.{% else %}Only applicants marked attended can be selected.{% endif %}</small></div></div>
+      {% if finalist %}<div class="card__body"><div class="finalist-card"><span class="avatar">{{ finalist.name[:2]|upper }}</span><div><strong>{{ finalist.name }}</strong><small>{{ finalist.email }}{% if finalist.phone %} · {{ finalist.phone }}{% endif %}</small></div>{{ status_badge('finalist') }}</div></div>{% elif attended %}<form method="post" action="/properties/{{ property.id }}/finalist"><div class="table-wrap"><table class="data-table"><thead><tr><th>Select</th><th>Applicant</th><th>Availability</th><th>Viewing</th></tr></thead><tbody>{% for applicant in attended %}<tr><td><input required type="radio" name="application_id" value="{{ applicant.id }}"></td><td><a class="person-cell" href="/applications/{{ applicant.id }}"><span class="avatar avatar--table {% if loop.index % 2 == 0 %}avatar--green{% endif %}">{{ applicant.name[:2]|upper }}</span><span><strong>{{ applicant.name }}</strong><small>{{ applicant.email }}</small></span></a></td><td>{{ applicant.availability|replace(',', ' · ') }}</td><td>{{ status_badge('attended') }}</td></tr>{% endfor %}</tbody></table></div><div class="card__footer"><span class="muted">Selecting a finalist does not send a contract yet.</span>{{ button('Select finalist', 'primary', type='submit') }}</div></form>{% else %}{{ empty_state('No attended viewings yet', 'Mark attendance in the schedule after a viewing to choose a finalist here.', 'Open schedule', '/properties/' ~ property.id ~ '/schedule') }}{% endif %}
+    </article>
+    {% if finalist %}<article class="card"><div class="card__header"><div><h2>Contract status</h2><small>Move through each step deliberately.</small></div>{{ status_badge(property.contract_status) }}</div><div class="card__body"><div class="stack">{% if property.contract_status == 'none' %}<form method="post" action="/properties/{{ property.id }}/contract/status"><input type="hidden" name="status" value="pending"><div class="contract-action"><div><strong>Prepare contract</strong><small>Mark it ready to send to {{ finalist.name }}.</small></div>{{ button('Mark pending', 'secondary', type='submit') }}</div></form>{% endif %}{% if property.contract_status == 'pending' %}<form method="post" action="/properties/{{ property.id }}/contract/status"><input type="hidden" name="status" value="sent"><div class="contract-action"><div><strong>Send contract</strong><small>Record that the contract has been sent.</small></div>{{ button('Mark sent', 'primary', type='submit') }}</div></form>{% endif %}{% if property.contract_status == 'sent' %}<form method="post" action="/properties/{{ property.id }}/contract/sign"><div class="form-field"><label for="contract-file">Signed demo contract</label><select id="contract-file" name="file_name" required><option value="">Choose signed file</option>{% for file in contract_files %}<option value="{{ file }}">{{ file }}</option>{% endfor %}</select></div><div class="form-actions">{{ button('Attach signed contract', 'primary', type='submit') }}</div></form>{% endif %}{% if property.contract_status == 'signed' %}<div class="signed-state"><span>✓</span><div><strong>Contract signed</strong><small>{{ property.signed_contract_file }}</small></div><a class="button button--secondary" href="/static/demo/{{ property.signed_contract_file }}">View file</a></div>{% endif %}</div></div></article>{% endif %}</section>
+  </div>
+  {% else %}
+    <section class="page-heading"><div><div class="eyebrow">Contract</div><h1>Property not found</h1><p>Choose a property from your dashboard to manage its contract.</p></div>{{ button('Go to dashboard', 'secondary', href='/') }}</section>
+  {% endif %}
 {% endblock %}

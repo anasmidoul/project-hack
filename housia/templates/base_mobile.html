@@ -1,24 +1,22 @@
+{% from '_macros.html' import flash_messages %}
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% block title %}HOUSIA{% endblock %} - HOUSIA</title>
-<link rel="stylesheet" href="/static/style.css">
-{% block head %}{% endblock %}
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}HOUSIA{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+  {% block head %}{% endblock %}
 </head>
-<body class="mobile">
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-<div class="flashes">
-  {% for category, message in messages %}
-  <div class="flash {{ category }}">{{ message }}</div>
-  {% endfor %}
-</div>
-{% endif %}
-{% endwith %}
-<main class="container-mobile">
-{% block content %}{% endblock %}
-</main>
+<body class="mobile-shell">
+  <header class="mobile-header">
+    <a href="/" class="brand brand--mobile"><span class="brand__mark">h</span><span>HOUSIA</span></a>
+    <span class="mobile-header__secure">Secure application</span>
+  </header>
+  <main class="mobile-content">
+    {{ flash_messages() }}
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="mobile-footer">Your information is only shared with the property owner for this application.</footer>
 </body>
 </html>

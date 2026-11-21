@@ -1,8 +1,9 @@
 """HOUSIA web app factory."""
 
+import secrets
 from datetime import datetime
 
-from flask import Flask, flash, redirect, request
+from flask import Flask, Response, abort, flash, redirect, request, session
 
 from housia import config, core, db
 
@@ -10,6 +11,7 @@ from housia import config, core, db
 def create_app() -> Flask:
     app = Flask(__name__)
     app.secret_key = config.SECRET_KEY
+    app.config["SESSION_COOKIE_SECURE"] = config.BASE_URL.startswith("https://")
 
     db.init_db()
 
@@ -24,6 +26,7 @@ def create_app() -> Flask:
         mock_inbox,
         properties,
         schedule,
+        workspace,
     )
 
     for module in (
@@ -37,8 +40,50 @@ def create_app() -> Flask:
         conversations,
         mock_inbox,
         demo,
+        workspace,
     ):
         app.register_blueprint(module.bp)
+
+    if config.OWNER_PASSWORD and config.SECRET_KEY == "dev":
+        raise RuntimeError("Set a strong SECRET_KEY before enabling owner access control.")
+
+    def csrf_token():
+        if "csrf_token" not in session:
+            session["csrf_token"] = secrets.token_urlsafe(32)
+        return session["csrf_token"]
+
+    app.jinja_env.globals["csrf_token"] = csrf_token
+
+    @app.before_request
+    def protect_workspace():
+        """Optional owner sign-in (OWNER_PASSWORD) and CSRF check on the owner workspace forms."""
+        endpoint = request.endpoint or ""
+        # Applicant links (token pages, public apply form) and the mock portal stay reachable.
+        public = endpoint in ("workspace.candidate", "static") or endpoint.startswith(
+            ("applicant.", "mock_inbox.")
+        )
+        if config.OWNER_PASSWORD and not public:
+            auth = request.authorization
+            if not auth or auth.username != "owner" or not secrets.compare_digest(
+                (auth.password or "").encode(), config.OWNER_PASSWORD.encode()
+            ):
+                return Response("Owner sign-in required.", 401,
+                                {"WWW-Authenticate": 'Basic realm="HOUSIA owner"'})
+        protected_form = endpoint.startswith(("workspace.", "properties.")) or endpoint == "demo.read_all"
+        if protected_form and request.method == "POST":
+            request.max_content_length = 2_100_000
+            expected = session.get("csrf_token")
+            if not expected or not secrets.compare_digest(
+                expected.encode(), request.form.get("csrf_token", "").encode()
+            ):
+                abort(400, "This form has expired. Reload the page and try again.")
+
+    @app.after_request
+    def private_pages(response):
+        if request.endpoint != "static":
+            response.headers["Cache-Control"] = "no-store"
+            response.headers["Referrer-Policy"] = "no-referrer"
+        return response
 
     @app.before_request
     def run_tick():

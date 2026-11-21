@@ -7,6 +7,7 @@ from flask import Blueprint, flash, redirect, render_template, request
 
 from housia import core, db
 from housia.services import properties
+from housia.web import workspace
 
 bp = Blueprint("properties", __name__)
 
@@ -28,12 +29,17 @@ def form(property_id=None):
 
 @bp.get("/properties/<int:property_id>")
 def detail(property_id):
+    step = request.args.get("step", "import")
+    if step not in workspace.STEPS:
+        step = "import"
     try:
         with db.tx() as conn:
             prop = properties.get_property(conn, property_id)
             stats = properties.property_stats(conn, property_id)
             link = properties.public_link(property_id)
             messages = properties.copy_messages(prop, link)
+            # Owner workspace (imported enquiries): step, steps, people, minimum, slots, channels, ...
+            workspace_context = workspace.context(conn, prop, step)
     except core.DomainError as exc:
         flash(str(exc), "error")
         return redirect("/")
@@ -43,6 +49,7 @@ def detail(property_id):
         stats=stats,
         public_link=link,
         copy_messages=messages,
+        **workspace_context,
     )
 
 

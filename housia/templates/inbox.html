@@ -1,10 +1,8 @@
-{% extends "base.html" %}
-{% block title %}Inbox{% endblock %}
+{% extends 'base.html' %}
+{% from '_macros.html' import button, empty_state %}
+{% block title %}Notifications · HOUSIA{% endblock %}
+{% block breadcrumb %}<span class="crumb"><strong>Notifications</strong></span>{% endblock %}
 {% block content %}
-<h1>Inbox</h1>
-<p>Placeholder page. Template unit: C7.</p>
-<p>Context variables:</p>
-<ul>
-  <li>notifications</li>
-</ul>
+  <section class="page-heading"><div><div class="eyebrow">Notification inbox</div><h1>Updates that need attention.</h1><p>One clear feed for your applications, viewings and message automation.</p></div><form method="post" action="/inbox/read-all"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{{ button('Mark all as read', 'secondary', type='submit') }}</form></section>
+  <section class="card"><div class="card__header"><div><h2>All notifications</h2><small>{{ notifications|length }} updates</small></div></div>{% if notifications %}<div class="notification-list">{% for notification in notifications %}<article class="notification {% if not notification.is_read %}notification--unread{% endif %}"><span class="notification__symbol">{% if 'viewing' in notification.title|lower %}◷{% elif 'document' in notification.title|lower %}▤{% elif 'message' in notification.title|lower %}◌{% else %}✦{% endif %}</span><div><h3>{{ notification.title }}</h3><p>{{ notification.body }}</p>{% if notification.recipient_name %}<small>For {{ notification.recipient_name }}</small>{% endif %}</div><time>{{ notification.created_at }}</time></article>{% endfor %}</div>{% else %}{{ empty_state('No notifications', 'Important updates from your rental workflow will appear here.') }}{% endif %}</section>
 {% endblock %}

@@ -1,16 +1,75 @@
 {#
-  Shared macros are documented here by unit C1.
-  Placeholder: C1 replaces this file and lists every shared macro and CSS class below.
+  Shared UI primitives:
+  button (primary/secondary/quiet/danger), status_badge, simulation_badge,
+  flash_messages, property_tabs, phone_frame and empty_state.
+  All landlord templates use these so interaction states stay consistent.
 #}
 
-{% macro property_tabs(property, active) %}
-{% set pid = property.id if property else "" %}
-<nav class="tabs">
-  <a href="/properties/{{ pid }}" class="{{ 'active' if active == 'overview' }}">Overview</a>
-  <a href="/properties/{{ pid }}/applications" class="{{ 'active' if active == 'applications' }}">Applications</a>
-  <a href="/properties/{{ pid }}/evaluation" class="{{ 'active' if active == 'evaluation' }}">Evaluation</a>
-  <a href="/properties/{{ pid }}/schedule" class="{{ 'active' if active == 'schedule' }}">Schedule</a>
-  <a href="/properties/{{ pid }}/contract" class="{{ 'active' if active == 'contract' }}">Contract</a>
-  <a href="/properties/{{ pid }}/conversations" class="{{ 'active' if active == 'conversations' }}">Conversations</a>
-</nav>
-{% endmacro %}
+{% macro button(label, kind='primary', type='button', href=None, extra_class='', disabled=False) -%}
+  {% if href %}
+    <a class="button button--{{ kind }} {{ extra_class }}" href="{{ href }}">{{ label }}</a>
+  {% else %}
+    <button class="button button--{{ kind }} {{ extra_class }}" type="{{ type }}"{% if disabled %} disabled{% endif %}>{{ label }}</button>
+  {% endif %}
+{%- endmacro %}
+
+{% macro status_badge(status) -%}
+  {% set labels = {
+    'new': 'New', 'docs_requested': 'Documents requested', 'docs_uploaded': 'Document uploaded',
+    'docs_correction': 'Correction requested', 'docs_approved': 'Documents approved',
+    'invited': 'Calendar access', 'booked': 'Viewing booked', 'attended': 'Attended',
+    'absent': 'Absent', 'finalist': 'Finalist', 'completed': 'Completed', 'closed': 'Closed',
+    'open': 'Open', 'needs_landlord': 'Needs you', 'received': 'Received', 'draft': 'Draft',
+    'approved': 'Ready to send', 'sent': 'Sent', 'failed': 'Failed', 'discarded': 'Discarded',
+    'pending': 'Pending', 'signed': 'Signed', 'none': 'Not started', 'free': 'Available',
+    'mine': 'Your booking', 'taken': 'Taken', 'waiting': 'On waiting list',
+    'offered_to_me': 'Your offer', 'held': 'Held'
+  } %}
+  <span class="badge badge--{{ status|default('neutral', true)|replace('_', '-') }}">{{ labels.get(status, status|replace('_', ' ')|title) }}</span>
+{%- endmacro %}
+
+{% macro simulation_badge() -%}
+  <span class="simulation-badge"><span aria-hidden="true">✦</span> Simulation</span>
+{%- endmacro %}
+
+{% macro flash_messages() -%}
+  {% with flashes = get_flashed_messages(with_categories=true) %}
+    {% if flashes %}
+      <div class="flash-stack" aria-live="polite">
+        {% for category, message in flashes %}
+          <div class="flash flash--{{ category|default('ok', true) }}">
+            <span class="flash__symbol" aria-hidden="true">{% if category == 'error' %}!{% else %}✓{% endif %}</span>
+            <span>{{ message }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+{%- endmacro %}
+
+{% macro property_tabs(property, active) -%}
+  <nav class="property-tabs" aria-label="Property navigation">
+    <a class="property-tab {% if active == 'overview' %}is-active{% endif %}" href="/properties/{{ property.id }}">Overview</a>
+    <a class="property-tab {% if active == 'applications' %}is-active{% endif %}" href="/properties/{{ property.id }}/applications">Applications</a>
+    <a class="property-tab {% if active == 'evaluation' %}is-active{% endif %}" href="/properties/{{ property.id }}/evaluation">Evaluation</a>
+    <a class="property-tab {% if active == 'schedule' %}is-active{% endif %}" href="/properties/{{ property.id }}/schedule">Schedule</a>
+    <a class="property-tab {% if active == 'contract' %}is-active{% endif %}" href="/properties/{{ property.id }}/contract">Contract</a>
+    <a class="property-tab {% if active == 'conversations' %}is-active{% endif %}" href="/properties/{{ property.id }}/conversations">Conversations</a>
+  </nav>
+{%- endmacro %}
+
+{% macro empty_state(title, detail, action_label=None, action_href=None) -%}
+  <div class="empty-state">
+    <div class="empty-state__mark" aria-hidden="true">✦</div>
+    <h3>{{ title }}</h3>
+    <p>{{ detail }}</p>
+    {% if action_label and action_href %}{{ button(action_label, 'secondary', href=action_href) }}{% endif %}
+  </div>
+{%- endmacro %}
+
+{% macro phone_frame(url, title='Applicant experience') -%}
+  <section class="phone-preview" aria-label="{{ title }}">
+    <div class="phone-preview__top"><span></span></div>
+    <iframe title="{{ title }}" src="{{ url }}"></iframe>
+  </section>
+{%- endmacro %}

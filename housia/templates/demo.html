@@ -1,11 +1,11 @@
-{% extends "base.html" %}
-{% block title %}Demo{% endblock %}
+{% extends 'base.html' %}
+{% from '_macros.html' import button, phone_frame, status_badge, empty_state %}
+{% block title %}Demo room · HOUSIA{% endblock %}
+{% block breadcrumb %}<span class="crumb"><strong>Demo room</strong></span>{% endblock %}
 {% block content %}
-<h1>Demo</h1>
-<p>Placeholder page. Template unit: C7.</p>
-<p>Context variables:</p>
-<ul>
-  <li>applications</li>
-  <li>selected_token</li>
-</ul>
+  <section class="page-heading"><div><div class="eyebrow">Live demo controls</div><h1>See both sides of HOUSIA.</h1><p>Run the full rental journey: a landlord workflow on the left, an applicant experience on the right.</p></div><div class="inline-actions"><form method="post" action="/demo/clock"><input type="hidden" name="minutes" value="10">{{ button('+10 min', 'secondary', type='submit') }}</form><form method="post" action="/demo/clock"><input type="hidden" name="minutes" value="30">{{ button('+30 min', 'secondary', type='submit') }}</form><form method="post" action="/demo/reset">{{ button('Reset demo', 'danger', type='submit') }}</form></div></section>
+  <section class="demo-clock"><span class="demo-clock__icon">◷</span><div><strong>Demo time: {{ now|dt }}</strong><small>{{ clock_offset_min|default(0) }} minute{{ '' if clock_offset_min|default(0) == 1 else 's' }} from real time</small></div><p>Use the clock controls to demonstrate expired viewing offers.</p></section>
+  {% if applications %}<form class="demo-picker" method="get" action="/demo"><label for="as">Applicant preview</label><select id="as" name="as">{% for applicant in applications %}<option value="{{ applicant.token }}" {% if applicant.token == selected_token %}selected{% endif %}>{{ applicant.name }} — {{ applicant.property_title }}</option>{% endfor %}</select>{{ button('View applicant', 'secondary', type='submit') }}<a class="button button--secondary" href="/mock/candidate">Create portal enquiry ↗</a></form>{% endif %}
+  <section class="demo-stage"><div class="demo-stage__landlord"><div class="demo-stage__label"><span>01</span> Landlord workspace <a href="/" target="_blank">Open fullscreen ↗</a></div><iframe title="Landlord workspace" src="/"></iframe></div><div class="demo-stage__applicant"><div class="demo-stage__label"><span>02</span> Applicant phone</div>{% if selected_token %}{{ phone_frame('/a/' ~ selected_token, 'Applicant experience') }}{% else %}<div class="phone-preview" style="display:grid;place-items:center;background:#f7f8f3;border-color:#1c2424"><span class="muted">Choose an applicant</span></div>{% endif %}</div></section>
+  <section class="demo-guide"><article><b>1</b><div><h3>New enquiry</h3><p>Use the mock candidate portal to send a message, then run the worker to see a reply.</p></div></article><article><b>2</b><div><h3>Review applications</h3><p>Approve documents and provide calendar access from the landlord workspace.</p></div></article><article><b>3</b><div><h3>Show the relay</h3><p>Cancel the booked slot and advance time to pass the offer down the waiting list.</p></div></article></section>
 {% endblock %}

@@ -20,7 +20,7 @@ def inbox():
         ).fetchall()
     return render_template(
         "inbox.html",
-        notifications=[],
+        notifications=notifications,
     )
 
 
