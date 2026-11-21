@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import button, simulation_badge %}
+{% block title %}How it works · HOUSIA{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/guide.css">{% endblock %}
+{% block breadcrumb %}<a class="crumb" href="/">Dashboard</a><span class="crumb"> / </span><strong>How it works</strong>{% endblock %}
+{% macro step(n, title) -%}
+  <li class="guide-step" id="step-{{ n }}"><span class="guide-step__n" aria-hidden="true">{{ n }}</span><div class="guide-step__body"><h3>{{ title }}</h3>{{ caller() }}</div></li>
+{%- endmacro %}
+{% macro feature(anchor, n, title, href, label) -%}
+  <article class="card guide-feature" id="{{ anchor }}"><div class="card__body"><div class="eyebrow">{{ '%02d' % n }}</div><h3>{{ title }}</h3><p>{{ caller() }}</p><a class="workspace-link" href="{{ href }}">See it: {{ label }} →</a></div></article>
+{%- endmacro %}
+{% block content %}
+{# Links: built from the current data, falling back to the dashboard when the data is missing. #}
+{% set portal_title = portal.title if portal else 'the first property' %}
+{% set conv_href = '/properties/%d/conversations' % portal.id if portal else '/' %}
+{% set cand_name = candidate.name if candidate else 'the candidate' %}
+{% set cand_first = candidate.name.split(' ')[0] if candidate else 'the candidate' %}
+{% set cand_app = '/applications/%d' % candidate.id if candidate else '/' %}
+{% set cand_page = '/a/' ~ candidate.token if candidate else '/' %}
+{% set cand_schedule = '/properties/%d/schedule' % candidate.property_id if candidate else '/' %}
+{% set cand_contract = '/properties/%d/contract' % candidate.property_id if candidate else '/' %}
+{% set relay_schedule = '/properties/%d/schedule' % relay.property_id if relay else '/' %}
+{% set booked = relay.booked if relay and relay.booked else None %}
+{% set first_wait = relay.waiting[0] if relay and relay.waiting|length > 0 else None %}
+{% set second_wait = relay.waiting[1] if relay and relay.waiting|length > 1 else None %}
+{% set eval_prop = (properties|selectattr('eval_mode', 'equalto', 'assisted')|first) or (properties|first) %}
+{% set eval_href = '/properties/%d/evaluation' % eval_prop.id if eval_prop else '/' %}
+<section class="page-heading"><div><div class="eyebrow">How it works</div><h1>What HOUSIA does, and how to try it.</h1><p class="guide-intro">HOUSIA is an assistant for a landlord who is renting out a home. It answers the messages a listing receives on a rental portal, collects and checks each candidate’s document, runs the viewing calendar and its waiting list, and follows the chosen candidate to a signed contract.</p></div><div class="inline-actions">{{ button('Open demo room', 'secondary', href='/demo') }}{{ button('Start step 1', 'primary', href='#try') }}</div></section>
+{% if viewer_role == 'judge' %}<p class="guide-note">You are signed in read-only. You can write as a candidate in Portalia and open every page, but buttons that change data are refused.</p>{% endif %}
+
+<section class="guide-section" id="try">
+  <div class="section-heading"><div><h2>Try it in five minutes</h2><p>Each step opens the right page of this demo. Everyone you meet here is fictional.</p></div></div>
+  <ol class="guide-steps">
+    {% call step(1, 'Write to the landlord as a candidate') %}
+      <p>In Portalia, the stand-in rental portal, send a message with any name as a new conversation. Reload the page after about 20 seconds. Then choose your conversation in the list and ask “Are pets allowed?”, and after that “Is there a washing machine?”.</p>
+      <p class="guide-step__result"><strong>What happens:</strong> HOUSIA replies with the rent, the document it needs and a personal link. The pets question is answered from the listing; the washing machine question is not guessed but passed to the landlord.</p>
+      <div class="inline-actions">{{ button('Open Portalia ↗', 'primary', href='/mock/candidate') }}</div>
+    {% endcall %}
+    {% call step(2, 'See the same conversation as the landlord') %}
+      <p>Open the conversations of “{{ portal_title }}” and click your conversation.</p>
+      <p class="guide-step__result"><strong>What happens:</strong> you see every message and reply. The unanswered question shows as “Needs you” with a draft reply you can edit and approve. {% if portal %}This property sends replies {{ 'automatically' if portal.reply_mode == 'automatic' else 'only after your approval' }}; {% endif %}in “assisted” mode every reply waits here as a draft.</p>
+      <div class="inline-actions">{{ button('Landlord conversations', 'primary', href=conv_href) }}{{ button('Notifications', 'secondary', href='/inbox') }}</div>
+    {% endcall %}
+    {% call step(3, 'Open a candidate’s personal page') %}
+      <p>Open the page of {{ cand_name }}, as they would on their phone.</p>
+      <p class="guide-step__result"><strong>What happens:</strong> no account or password, just a private link. It shows the steps: details, document, viewing.</p>
+      <div class="inline-actions">{{ button(cand_first ~ '’s page', 'primary', href=cand_page) }}</div>
+    {% endcall %}
+    {% call step(4, 'Request a document and read the AI check') %}
+      <p>On {{ cand_first }}’s application press “Request document”. On {{ cand_first }}’s page choose a demo file and press “Submit document”. Go back to the application.</p>
+      <p class="guide-step__result"><strong>What happens:</strong> a short AI check of the document appears: what it is, whether it matches what was asked, whether the name matches. Approving it is your decision.</p>
+      <div class="inline-actions">{{ button(cand_first ~ '’s application', 'primary', href=cand_app) }}{{ button(cand_first ~ '’s page', 'secondary', href=cand_page) }}</div>
+    {% endcall %}
+    {% call step(5, 'Send an acceptance') %}
+      <p>On the application, press “Send acceptance” in the “Decision message” box.</p>
+      <p class="guide-step__result"><strong>What happens:</strong> {{ cand_first }} gets access to the viewing calendar, and the message appears on their page.</p>
+      <div class="inline-actions">{{ button(cand_first ~ '’s application', 'primary', href=cand_app) }}</div>
+    {% endcall %}
+    {% call step(6, 'Book a viewing') %}
+      <p>On {{ cand_first }}’s page press “Book” next to a viewing time.</p>
+      <p class="guide-step__result"><strong>What happens:</strong> the booking appears on the landlord’s schedule.</p>
+      <div class="inline-actions">{{ button(cand_first ~ '’s page', 'primary', href=cand_page) }}{{ button('Schedule', 'secondary', href=cand_schedule) }}</div>
+    {% endcall %}
+    {% call step(7, 'Cancel a viewing and watch the waiting list') %}
+      <p>Open the schedule and press “Cancel booking” on {% if booked %}{{ booked.name }}’s viewing{% else %}the viewing that has a waiting list{% endif %}{% if first_wait and second_wait %} ({{ first_wait.name }} and {{ second_wait.name }} are waiting){% endif %}. Then, in the demo room, press “+30 min” to move the demo clock forward.</p>
+      <p class="guide-step__result"><strong>What happens:</strong> the time is offered to {{ first_wait.name if first_wait else 'the first person waiting' }} for 30 minutes. When the clock passes that, the offer moves to {{ second_wait.name if second_wait else 'the next person' }}, who can accept it on their page.</p>
+      <div class="inline-actions">{{ button('Schedule with waiting list', 'primary', href=relay_schedule) }}{% if first_wait %}{{ button(first_wait.name.split(' ')[0] ~ '’s page', 'secondary', href='/a/' ~ first_wait.token) }}{% endif %}{{ button('Demo room (+30 min)', 'secondary', href='/demo') }}{% if second_wait %}{{ button(second_wait.name.split(' ')[0] ~ '’s page', 'secondary', href='/a/' ~ second_wait.token) }}{% endif %}</div>
+    {% endcall %}
+    {% call step(8, 'Finish: attendance, final candidate, contract') %}
+      <p>On the schedule press “Mark attended” on {{ cand_first }}’s viewing. On the contract page select {{ cand_first }}, then press “Mark pending”, “Mark sent”, and attach the signed demo file.</p>
+      <p class="guide-step__result"><strong>What happens:</strong> the contract shows as signed and {{ cand_first }}’s page says they are the selected candidate.</p>
+      <div class="inline-actions">{{ button('Schedule', 'primary', href=cand_schedule) }}{{ button('Contract', 'secondary', href=cand_contract) }}</div>
+    {% endcall %}
+    {% call step(9, 'Reset') %}
+      <p>In the demo room press “Reset demo”.</p>
+      <p class="guide-step__result"><strong>What happens:</strong> all data goes back to the starting state, for everyone using this demo.</p>
+      <div class="inline-actions">{{ button('Demo room', 'primary', href='/demo') }}</div>
+    {% endcall %}
+  </ol>
+</section>
+
+<section class="guide-section" id="features">
+  <div class="section-heading"><div><h2>What HOUSIA does</h2><p>Eight parts of one rental, from the first message to the contract.</p></div></div>
+  <div class="guide-features">
+    {% call feature('f-replies', 1, 'Answers enquiries by itself', conv_href, 'conversations') %}It reads the messages a listing receives on a rental portal and replies from the listing’s own facts. A question the facts do not answer is not guessed: it goes to the landlord. Per property the landlord chooses “automatic” (replies are sent) or “assisted” (each reply waits for approval and can be edited).{% endcall %}
+    {% call feature('f-privacy', 2, 'Protects personal data', cand_app, 'a document check') %}Before any text goes to the AI model, names, emails, phone numbers and identity or bank numbers are replaced by placeholders. The real values are put back afterwards, on the landlord’s side. You do not see the masking; you see its result, with real names, in the landlord’s pages.{% endcall %}
+    {% call feature('f-link', 3, 'A personal link for every candidate', cand_page, 'a candidate’s page') %}No account needed. On their page candidates complete their details, submit the document the landlord asked for, and later book a viewing.{% endcall %}
+    {% call feature('f-documents', 4, 'Checks documents', cand_app, 'an application') %}When a document arrives, the AI writes a short check for the landlord: what it is, whether it matches what was asked, whether the name matches. The landlord always decides.{% endcall %}
+    {% call feature('f-ranking', 5, 'Ranks candidates', eval_href, 'the evaluation') %}By how many open viewing times fit each candidate’s availability; ties go to who applied first. The reason is shown. Assisted: the landlord picks who to invite. Automatic: the top candidates are invited, up to a limit. This is a simple, transparent rule, labelled as a simulation.{% endcall %}
+    {% call feature('f-viewings', 6, 'Runs the viewing calendar and waiting list', relay_schedule, 'a schedule') %}Candidates book a time, or join the waiting list of a taken one. When a viewing is cancelled, the time is offered to the first person waiting. They have 30 minutes (or until the viewing starts) before it passes to the next.{% endcall %}
+    {% call feature('f-messages', 7, 'Sends accept and decline messages', cand_app, 'the decision message') %}Written for the landlord, sent with one button, and shown on the candidate’s page.{% endcall %}
+    {% call feature('f-contract', 8, 'Follows it to the contract', cand_contract, 'the contract') %}Attendance after the viewing, the final candidate, and the contract status up to “signed”.{% endcall %}
+  </div>
+</section>
+
+<section class="guide-section" id="real">
+  <div class="section-heading"><div><h2>What is real in this demo</h2></div></div>
+  <article class="card"><div class="card__body"><ul class="guide-real">
+    <li><strong>Real:</strong> the AI replies and the AI document checks. They need the AI model to be set up on the server; without it, HOUSIA uses fixed template replies and skips the check.</li>
+    <li><strong>Stand-in:</strong> the rental portal. “Portalia” is a small copy made for this demo. The same automation also drives a real portal inbox through a browser; that is not part of the public demo.</li>
+    <li><strong>Fictional:</strong> all people and all documents.</li>
+    <li><strong>Simulated:</strong> the ranking is a simple rule, labelled {{ simulation_badge() }}. The demo clock (“+10 min”, “+30 min”) moves time forward only inside the demo.</li>
+    <li><strong>Background work:</strong> portal messages are read and answered by a separate process that checks about every 20 seconds, so replies are not instant.</li>
+  </ul></div></article>
+</section>
+{% endblock %}

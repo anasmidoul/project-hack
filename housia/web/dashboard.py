@@ -35,6 +35,52 @@ def index():
     )
 
 
+@bp.get("/guide")
+def guide():
+    """How the demo works, with links built from the data that exists now.
+
+    candidate: the earliest applicant of the property that receives portal enquiries (property 1
+    in the seed), used for the document, acceptance, booking and contract steps.
+    relay: the first viewing with people waiting (in the seed: one booking, two waiting). After
+    a cancellation the slot keeps its waiting list while an offer is held, so it is still found.
+    Either may be None; the template then links to the dashboard.
+    """
+    with db.tx() as conn:
+        props = conn.execute(
+            "SELECT id,title,reply_mode,eval_mode FROM properties ORDER BY id"
+        ).fetchall()
+        portal = conn.execute("SELECT id,title,reply_mode FROM properties WHERE id = 1").fetchone()
+        candidate = conn.execute(
+            "SELECT id,name,token,property_id FROM applications "
+            "ORDER BY (property_id = 1) DESC, created_at, id LIMIT 1"
+        ).fetchone()
+        slot = conn.execute(
+            "SELECT s.* FROM slots s WHERE EXISTS (SELECT 1 FROM waitlist w WHERE w.slot_id = s.id) "
+            "ORDER BY (s.booked_application_id IS NOT NULL) DESC, s.id LIMIT 1"
+        ).fetchone()
+        relay = None
+        if slot is not None:
+            booked = None
+            if slot["booked_application_id"]:
+                booked = conn.execute(
+                    "SELECT id,name,token FROM applications WHERE id = ?",
+                    (slot["booked_application_id"],),
+                ).fetchone()
+            waiting = conn.execute(
+                "SELECT a.id,a.name,a.token FROM waitlist w JOIN applications a ON a.id = w.application_id "
+                "WHERE w.slot_id = ? ORDER BY w.joined_at, w.id",
+                (slot["id"],),
+            ).fetchall()
+            relay = {"property_id": slot["property_id"], "booked": booked, "waiting": waiting}
+    return render_template(
+        "guide.html",
+        properties=props,
+        portal=portal,
+        candidate=candidate,
+        relay=relay,
+    )
+
+
 def _workspace_counts(conn, property_id):
     """Counts on a property card.
 

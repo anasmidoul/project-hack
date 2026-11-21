@@ -1,11 +1,13 @@
 {% extends 'base.html' %}
-{% from '_macros.html' import button, property_tabs, status_badge, empty_state %}
+{% from '_macros.html' import button, property_tabs, status_badge, empty_state, page_hint %}
 {% block title %}Contract · {{ property.title if property else 'Property' }} · HOUSIA{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/guide.css">{% endblock %}
 {% block breadcrumb %}<span class="crumb">Properties / {{ property.title if property else 'Property' }} / <strong>Contract</strong></span>{% endblock %}
 {% block content %}
   {% if property %}
   <section class="page-heading"><div><div class="eyebrow">{{ property.title }}</div><h1>Final candidate & contract</h1><p>Choose from attended viewings, then track the contract to signature.</p></div>{{ status_badge(property.contract_status) }}</section>
   {{ property_tabs(property, 'contract') }}
+  {{ page_hint('Choose the final candidate from the people marked as attended, then move the contract step by step to “signed”. Mark attendance on the Schedule tab first.', 'f-contract') }}
   <div class="contract-steps"><div class="contract-step {% if property.contract_status in ['pending','sent','signed'] %}is-done{% endif %}"><b>1</b><span>Choose finalist</span></div><i></i><div class="contract-step {% if property.contract_status in ['sent','signed'] %}is-done{% endif %}"><b>2</b><span>Send contract</span></div><i></i><div class="contract-step {% if property.contract_status == 'signed' %}is-done{% endif %}"><b>3</b><span>Signed</span></div></div>
   <div class="split-grid">
     <section class="stack"><article class="card"><div class="card__header"><div><h2>{% if finalist %}Selected finalist{% else %}People who attended{% endif %}</h2><small>{% if finalist %}This applicant has been selected for the property.{% else %}Only applicants marked attended can be selected.{% endif %}</small></div></div>

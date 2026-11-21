@@ -1,11 +1,13 @@
 {% extends 'base.html' %}
-{% from '_macros.html' import button, property_tabs, status_badge, simulation_badge, empty_state %}
+{% from '_macros.html' import button, property_tabs, status_badge, simulation_badge, empty_state, page_hint %}
 {% block title %}Evaluation · {{ property.title if property else 'Property' }} · HOUSIA{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/guide.css">{% endblock %}
 {% block breadcrumb %}<span class="crumb">Properties / {{ property.title if property else 'Property' }} / <strong>Evaluation</strong></span>{% endblock %}
 {% block content %}
   {% if property %}
   <section class="page-heading"><div><div class="eyebrow">{{ property.title }}</div><h1>Viewing evaluation</h1><p>Rank document-approved applicants against your available viewing slots.</p></div><div class="inline-actions">{{ simulation_badge() }}<form method="post" action="/properties/{{ property.id }}/evaluation">{{ button('Run evaluation', 'primary', type='submit') }}</form></div></section>
   {{ property_tabs(property, 'evaluation') }}
+  {{ page_hint('Ranks candidates with an approved document by how many open viewing times fit their availability, using a simple rule shown as a simulation. Try “Run evaluation” and read the reason given for each rank.', 'f-ranking') }}
   <section class="three-up"><article class="stat-card"><span class="stat-card__label">Eligible applicants</span><strong class="stat-card__value">{{ eligible_count }}</strong><span class="stat-card__note">documents approved</span></article><article class="stat-card stat-card--accent"><span class="stat-card__label">Places remaining</span><strong class="stat-card__value">{{ remaining }}</strong><span class="stat-card__note">of {{ property.invite_limit }} invitations</span></article><article class="stat-card stat-card--purple"><span class="stat-card__label">Mode</span><strong class="stat-card__value" style="font-size:22px">{{ property.eval_mode|title }}</strong><span class="stat-card__note">{{ 'invites are sent on this run' if property.eval_mode == 'automatic' else 'you choose before sending' }}</span></article></section>
   <section class="card" style="margin-top:23px"><div class="card__header"><div><h2>Ranked availability</h2><small>Higher scores mean more open slots fit the applicant’s stated availability. Ties use application time.</small></div>{% if result %}{{ simulation_badge() }}{% endif %}</div>
     {% if result and result.proposals %}

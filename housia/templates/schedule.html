@@ -1,11 +1,13 @@
 {% extends 'base.html' %}
-{% from '_macros.html' import button, property_tabs, status_badge, empty_state %}
+{% from '_macros.html' import button, property_tabs, status_badge, empty_state, page_hint %}
 {% block title %}Schedule · {{ property.title if property else 'Property' }} · HOUSIA{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/guide.css">{% endblock %}
 {% block breadcrumb %}<span class="crumb">Properties / {{ property.title if property else 'Property' }} / <strong>Schedule</strong></span>{% endblock %}
 {% block content %}
   {% if property %}
   <section class="page-heading"><div><div class="eyebrow">{{ property.title }}</div><h1>Viewing schedule</h1><p>Create slots, see bookings, and keep waiting lists moving automatically.</p></div><a href="#new-slot" class="button button--primary">+ Add viewing slot</a></section>
   {{ property_tabs(property, 'schedule') }}
+  {{ page_hint('Viewing times, bookings and waiting lists for this home. Try “Cancel booking” on a viewing that has a waiting list: the time is offered to the first person waiting for 30 minutes.', 'f-viewings') }}
   <div class="split-grid">
     <section class="stack">
       <article class="card"><div class="card__header"><div><h2>Upcoming slots</h2><small>A cancelled booking is offered to the next person in line for 30 minutes.</small></div><span class="badge badge--invited">{{ slots|length }} slots</span></div>

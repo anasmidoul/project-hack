@@ -1,8 +1,8 @@
 {% extends 'base.html' %}
-{% from '_macros.html' import empty_state, property_tabs, property_photo_url %}
+{% from '_macros.html' import empty_state, property_tabs, property_photo_url, page_hint %}
 {% block title %}{{ property.title }} · HOUSIA{% endblock %}
 {% block breadcrumb %}<a class="crumb" href="/">Workspace</a><span class="crumb"> / </span><strong>{{ property.title }}</strong>{% endblock %}
-{% block head %}<script defer src="{{ url_for('static', filename='workspace.js') }}"></script>{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/guide.css"><script defer src="{{ url_for('static', filename='workspace.js') }}"></script>{% endblock %}
 {% block content %}
 {% set id = property.id %}
 {% set undecided = people|rejectattr('decision')|list %}
@@ -14,6 +14,7 @@
   <a class="button button--secondary" href="/properties/{{ id }}/edit">Edit property</a>
 </section>
 {{ property_tabs(property, 'overview') }}
+{{ page_hint('The workspace for one home. The tabs above lead to its applications, evaluation, schedule, contract and portal conversations; the four steps below are for enquiries you import from other channels. Try the Conversations tab to see what HOUSIA answered.', 'features') }}
 <img class="property-photo property-photo--cover" src="{{ property_photo_url(property) }}" alt="" loading="lazy">
 <section class="stat-grid workspace-stats" aria-label="Property overview">
   {% for value, label in [(stats.applications, 'Applications'), (stats.invited, 'Calendar access'), (stats.booked, 'Viewings booked'), (stats.needs_landlord, 'Conversations need you')] %}
