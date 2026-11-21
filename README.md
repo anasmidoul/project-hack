@@ -83,6 +83,21 @@ Requests through the tunnel (they carry Cloudflare's forwarding headers):
 
 Requests made directly on this machine (no forwarding headers) behave as before.
 
+**Private guest demos (optional).** Set `GUEST_LINK_CODE` (a long random code of letters,
+digits, `-` and `_`) and the script prints a `Guest link: <public address>/guest/<code>`. Each
+browser that opens it gets its own copy of the demo (a SQLite file in `instance/sandboxes/`,
+`SANDBOX_DIR`) and the owner's rights inside it: approve, invite, cancel, reset, move the demo
+clock, add a property. Nothing a guest does reaches other guests or the main database; their
+applicant pages (`/a/<token>`, `/apply/<id>`) in the same browser use their copy too, and the
+worker answers their mock portal messages. New copies start from `instance/sandbox-template.db`
+(`SANDBOX_TEMPLATE`), which the script builds from the demo database at start
+(`uv run python -m housia.sandbox make-template`); without a template, the main database as it
+is at that moment is copied. Applicant tokens are new in every copy. At most `SANDBOX_MAX`
+copies (default 150): when full, copies idle for 30 minutes are removed, otherwise the link
+answers "The demo is full". Copies unused for 12 hours are deleted when the app starts. A wrong
+code, an empty `GUEST_LINK_CODE` or the default `SECRET_KEY` answer 404. Owner and judge
+sign-ins always use the main database, also in a browser that has a guest demo.
+
 ## Owner workspace (imported enquiries)
 
 On each property page (steps Import, Screen, Reply, Viewings). For listings whose enquiries arrive outside HOUSIA; independent of the worker.

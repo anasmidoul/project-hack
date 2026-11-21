@@ -57,3 +57,8 @@ OWNER_PASSWORD: str | None = _str("OWNER_PASSWORD")
 # Optional read-only sign-in (username "judge"); off when empty or equal to OWNER_PASSWORD.
 JUDGE_PASSWORD: str | None = _str("JUDGE_PASSWORD")
 WORKSPACE_AI_NOTES: bool = _str("WORKSPACE_AI_NOTES", "0") == "1"
+# Private guest demos (see housia/sandbox.py). Off when GUEST_LINK_CODE is empty.
+GUEST_LINK_CODE: str | None = _str("GUEST_LINK_CODE")
+SANDBOX_DIR: str = _str("SANDBOX_DIR", "instance/sandboxes")
+SANDBOX_TEMPLATE: str = _str("SANDBOX_TEMPLATE", "instance/sandbox-template.db")
+SANDBOX_MAX: int = _int("SANDBOX_MAX", 150)

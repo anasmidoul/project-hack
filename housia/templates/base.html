@@ -42,7 +42,7 @@
     <header class="topbar">
       <div>{% block breadcrumb %}<span class="crumb">Dashboard</span>{% endblock %}</div>
       <div class="topbar__actions">
-        {% if viewer_role == 'judge' %}<span class="judge-badge" style="padding:4px 10px;border-radius:999px;background:#fff3cd;color:#664d03;border:1px solid #e0c060;font-size:13px;font-weight:600;white-space:nowrap">Judge view · read-only</span>{% endif %}
+        {% if viewer_role == 'judge' %}<span class="judge-badge" style="padding:4px 10px;border-radius:999px;background:#fff3cd;color:#664d03;border:1px solid #e0c060;font-size:13px;font-weight:600;white-space:nowrap">Judge view · read-only</span>{% elif viewer_role == 'guest' %}<span class="guest-badge" style="padding:4px 10px;border-radius:999px;background:#e7f1ff;color:#084298;border:1px solid #9ec5fe;font-size:13px;font-weight:600">Your private demo · changes are only visible to you</span>{% endif %}
         <a href="/inbox" class="notification-button" aria-label="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>{% if unread_count|default(0) %}<b>{{ unread_count }}</b>{% endif %}</a>
       </div>
     </header>

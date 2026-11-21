@@ -7,7 +7,7 @@ from housia import config, db
 
 
 @pytest.fixture(autouse=True)
-def isolated_config(monkeypatch):
+def isolated_config(monkeypatch, tmp_path):
     """Tests never use the developer's .env: no API key, no model, template replies, mock portal."""
     monkeypatch.setattr(config, "OPENAI_API_KEY", None)
     monkeypatch.setattr(config, "REPLY_MODEL", None)
@@ -21,6 +21,10 @@ def isolated_config(monkeypatch):
     monkeypatch.setattr(config, "OWNER_PASSWORD", None)
     monkeypatch.setattr(config, "JUDGE_PASSWORD", None)
     monkeypatch.setattr(config, "SECRET_KEY", "test-secret-key")
+    monkeypatch.setattr(config, "GUEST_LINK_CODE", None)
+    monkeypatch.setattr(config, "SANDBOX_DIR", str(tmp_path / "sandboxes"))
+    monkeypatch.setattr(config, "SANDBOX_TEMPLATE", str(tmp_path / "sandbox-template.db"))
+    monkeypatch.setattr(config, "SANDBOX_MAX", 150)
 
 
 @pytest.fixture

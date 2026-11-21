@@ -4,7 +4,7 @@ import secrets
 from datetime import datetime
 from urllib.parse import urlsplit
 
-from flask import Flask, Response, abort, flash, redirect, request, session
+from flask import Flask, Response, abort, flash, g, redirect, request, session
 from flask.sessions import SecureCookieSessionInterface
 
 from housia import config, core, db
@@ -27,10 +27,19 @@ def _public_allowed(endpoint: str, path: str) -> bool:
     """What a public request may reach without the owner sign-in: applicant pages and forms,
     static files and the favicon."""
     return (
-        endpoint in ("workspace.candidate", "static")
+        endpoint in ("workspace.candidate", "static", "guest_link")
         or endpoint.startswith("applicant.")
         or path == "/favicon.ico"
     )
+
+
+DEMO_FULL_PAGE = ("<!doctype html><meta charset=\"utf-8\"><title>HOUSIA demo</title>"
+                  "<p style=\"font-family:sans-serif;margin:40px\">The demo is full, try again later.</p>")
+
+
+def _demo_full() -> Response:
+    return Response(DEMO_FULL_PAGE, 503, {"Content-Type": "text/html; charset=utf-8",
+                                          "Retry-After": "600"})
 
 
 def _is_https(req) -> bool:
@@ -48,6 +57,8 @@ class _SessionInterface(SecureCookieSessionInterface):
 
 
 def create_app() -> Flask:
+    from housia import sandbox  # not at import time: `python -m housia.sandbox` imports this package
+
     app = Flask(__name__)
     app.secret_key = config.SECRET_KEY
     app.session_interface = _SessionInterface()
@@ -55,6 +66,7 @@ def create_app() -> Flask:
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
     db.init_db()
+    sandbox.cleanup_stale()
 
     from housia.web import (
         applicant,
@@ -141,6 +153,61 @@ def create_app() -> Flask:
             return path + (f"?{parts.query}" if parts.query else "")
         return "/"
 
+    def _guest_sandbox_path():
+        """The sandbox file for this browser's guest session, or None when it is not a guest.
+
+        A guest session whose sandbox is invalid or gone gets a fresh one (never the main
+        database). Raises sandbox.SandboxFull when there is no room for it."""
+        if sandbox.SESSION_KEY not in session or not sandbox.guest_enabled(app.secret_key):
+            return None
+        path = sandbox.path_for(session.get(sandbox.SESSION_KEY))
+        if path is None or not path.is_file():
+            session[sandbox.SESSION_KEY] = sandbox.create()
+            path = sandbox.path_for(session[sandbox.SESSION_KEY])
+        sandbox.touch(path)
+        return path
+
+    @app.before_request
+    def choose_database():
+        """First hook of every request: who is asking, and which database file serves them.
+
+        Owner or judge Basic credentials always mean the main database, even with a guest
+        session in the same browser. A guest session (and no valid credentials) means that
+        guest's sandbox file. Anyone else uses the main database, as before. The choice is
+        undone in `clear_database` at the end of the request."""
+        g.db_token = db.set_override(None)
+        g.viewer_role = signed_in_role()
+        if g.viewer_role is not None:
+            return None
+        try:
+            path = _guest_sandbox_path()
+        except sandbox.SandboxFull:
+            return _demo_full()
+        if path is not None:
+            db.clear_override(g.pop("db_token"))
+            g.db_token = db.set_override(path)
+            g.viewer_role = "guest"
+        return None
+
+    @app.teardown_request
+    def clear_database(_exc):
+        db.clear_override(g.pop("db_token", None))
+
+    @app.get("/guest/<code>", endpoint="guest_link")
+    def guest_link(code):
+        """Private guest demo: a new sandbox for this browser (or its current one), then /demo."""
+        expected = (config.GUEST_LINK_CODE or "").encode()
+        if not (secrets.compare_digest(code.encode(), expected)
+                and sandbox.guest_enabled(app.secret_key)):
+            abort(404)
+        current = sandbox.path_for(session.get(sandbox.SESSION_KEY))
+        if current is None or not current.is_file():
+            try:
+                session[sandbox.SESSION_KEY] = sandbox.create()
+            except sandbox.SandboxFull:
+                return _demo_full()
+        return redirect("/demo")
+
     @app.before_request
     def protect_workspace():
         """Owner sign-in (OWNER_PASSWORD) and CSRF check on the owner workspace forms.
@@ -153,9 +220,11 @@ def create_app() -> Flask:
         open; everything else needs the sign-in, and is refused when no password is configured.
         """
         endpoint = request.endpoint or ""
+        # A guest has the owner's rights, but only inside their own sandbox database.
+        is_guest = g.get("viewer_role") == "guest"
         if is_public_request(request):
             needs_owner = not _public_allowed(endpoint, request.path)
-            if needs_owner and not config.OWNER_PASSWORD:
+            if needs_owner and not is_guest and not config.OWNER_PASSWORD:
                 return Response("Forbidden: owner sign-in is not configured.", 403,
                                 {"Content-Type": "text/plain; charset=utf-8"})
             if request.method == "POST" and not _same_origin():
@@ -163,10 +232,10 @@ def create_app() -> Flask:
                                 {"Content-Type": "text/plain; charset=utf-8"})
         else:
             # Applicant links (token pages, public apply form) and the mock portal stay reachable.
-            needs_owner = not (endpoint in ("workspace.candidate", "static") or endpoint.startswith(
+            needs_owner = not (endpoint in ("workspace.candidate", "static", "guest_link") or endpoint.startswith(
                 ("applicant.", "mock_inbox.")
             ))
-        if config.OWNER_PASSWORD and needs_owner:
+        if config.OWNER_PASSWORD and needs_owner and not is_guest:
             role = signed_in_role()
             if role is None:
                 return Response("Owner sign-in required.", 401,
@@ -229,7 +298,7 @@ def create_app() -> Flask:
                 "SELECT COUNT(*) FROM notifications WHERE application_id IS NULL AND is_read = 0"
             ).fetchone()[0]
             return {
-                "viewer_role": signed_in_role(),
+                "viewer_role": g.get("viewer_role"),
                 "now": core.now(conn),
                 "clock_offset_min": int(core.get_setting(conn, "clock_offset_min", "0") or 0),
                 "unread_count": unread,

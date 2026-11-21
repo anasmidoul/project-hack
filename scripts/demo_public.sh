@@ -39,8 +39,9 @@ print(config.PORT)
 print("yes" if config.OWNER_PASSWORD else "no")
 print("yes" if config.SECRET_KEY and config.SECRET_KEY != "dev" else "no")
 print("yes" if config.JUDGE_PASSWORD and config.JUDGE_PASSWORD != config.OWNER_PASSWORD else "no")
+print("yes" if config.GUEST_LINK_CODE else "no")
 ')" || die "could not read the HOUSIA configuration (run: uv sync)."
-{ read -r cfg_channel; read -r cfg_port; read -r has_password; read -r has_secret; read -r has_judge; } <<<"$settings"
+{ read -r cfg_channel; read -r cfg_port; read -r has_password; read -r has_secret; read -r has_judge; read -r has_guest; } <<<"$settings"
 
 [[ "$cfg_channel" == "mock" ]] \
   || die "CHANNEL=${cfg_channel} (from .env) is not allowed. The public demo uses only the mock portal:
@@ -112,6 +113,11 @@ if [[ ! -f "$HOUSIA_DB" ]]; then
   uv run --quiet python -c 'from housia import db; db.reset_db()' >>"$APP_LOG" 2>&1 \
     || die "could not create the demo database. See ${APP_LOG}."
 fi
+# Guest demos start from a copy of the database as it is now.
+if [[ "$has_guest" == "yes" ]]; then
+  uv run --quiet python -m housia.sandbox make-template >>"$APP_LOG" 2>&1 \
+    || die "could not build the guest demo template. See ${APP_LOG}."
+fi
 
 # 3. App, with request lines kept out of the log (applicant links are private bearer links).
 export BASE_URL="$PUBLIC_URL"
@@ -141,6 +147,10 @@ echo "  Applicant page:   ${PUBLIC_URL}/apply/1   (personal links: ${PUBLIC_URL}
 echo "  Owner pages:      ${PUBLIC_URL}/demo   (sign in as 'owner' with OWNER_PASSWORD)"
 if [[ "$has_judge" == "yes" ]]; then
   echo "  Judge login:      available, read-only (sign in as 'judge' with JUDGE_PASSWORD)"
+fi
+if [[ "$has_guest" == "yes" ]]; then
+  GUEST_CODE="$(uv run --quiet python -c 'from housia import config; print(config.GUEST_LINK_CODE)')"
+  echo "  Guest link:       ${PUBLIC_URL}/guest/${GUEST_CODE}   (each visitor gets a private copy)"
 fi
 echo "  Database:         ${HOUSIA_DB}   Worker: $( ((RUN_WORKER)) && echo on || echo off )"
 echo "  Logs:             instance/demo-*.log"
