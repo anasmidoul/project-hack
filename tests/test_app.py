@@ -44,3 +44,8 @@ def test_dt_filter(client):
     dt = client.application.jinja_env.filters["dt"]
     assert dt("2026-11-23T09:00:00") == "Mon 23 Nov, 09:00"
     assert dt(None) == ""
+
+
+def test_dashboard_links_to_the_demo_page(client):
+    html = client.get("/").get_data(as_text=True)
+    assert 'href="/demo"' in html and "Open demo" in html
