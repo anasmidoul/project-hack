@@ -5,6 +5,15 @@
   All landlord templates use these so interaction states stay consistent.
 #}
 
+{% macro brand_logo(variant='light', small=False, href='/') -%}
+  <a href="{{ href }}" class="hz-logo{% if variant == 'dark' %} hz-logo--dark{% endif %}{% if small %} hz-logo--small{% endif %}" aria-label="HOUSIA home"><span class="hz-logo__mark"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg></span><span class="hz-logo__word" aria-hidden="true">housia<span class="hz-logo__dot">.</span></span></a>
+{%- endmacro %}
+
+{% macro property_photo_url(property) -%}
+  {%- set photos = ['eixample.jpg', 'gracia.jpg', 'eixample-bedroom.jpg'] -%}
+  /static/photos/{{ photos[((property.id if property and property.id else 1) - 1) % 3] }}
+{%- endmacro %}
+
 {% macro button(label, kind='primary', type='button', href=None, extra_class='', disabled=False) -%}
   {% if href %}
     <a class="button button--{{ kind }} {{ extra_class }}" href="{{ href }}">{{ label }}</a>

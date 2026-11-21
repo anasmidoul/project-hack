@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% from '_macros.html' import empty_state, property_tabs %}
+{% from '_macros.html' import empty_state, property_tabs, property_photo_url %}
 {% block title %}{{ property.title }} · HOUSIA{% endblock %}
 {% block breadcrumb %}<a class="crumb" href="/">Workspace</a><span class="crumb"> / </span><strong>{{ property.title }}</strong>{% endblock %}
 {% block head %}<script defer src="{{ url_for('static', filename='workspace.js') }}"></script>{% endblock %}
@@ -14,6 +14,7 @@
   <a class="button button--secondary" href="/properties/{{ id }}/edit">Edit property</a>
 </section>
 {{ property_tabs(property, 'overview') }}
+<img class="property-photo property-photo--cover" src="{{ property_photo_url(property) }}" alt="" loading="lazy">
 <section class="stat-grid workspace-stats" aria-label="Property overview">
   {% for value, label in [(stats.applications, 'Applications'), (stats.invited, 'Calendar access'), (stats.booked, 'Viewings booked'), (stats.needs_landlord, 'Conversations need you')] %}
   <article class="stat-card"><strong class="stat-card__value">{{ value }}</strong><span class="stat-card__label">{{ label }}</span></article>

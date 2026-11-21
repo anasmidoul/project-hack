@@ -1,4 +1,4 @@
-{% from '_macros.html' import flash_messages %}
+{% from '_macros.html' import flash_messages, brand_logo %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -6,11 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}HOUSIA{% endblock %}</title>
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/brand.css">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   {% block head %}{% endblock %}
 </head>
 <body class="mobile-shell">
   <header class="mobile-header">
-    <a href="/" class="brand brand--mobile"><span class="brand__mark">h</span><span>HOUSIA</span></a>
+    {{ brand_logo('light', small=True) }}
     <span class="mobile-header__secure">Secure application</span>
   </header>
   <main class="mobile-content">

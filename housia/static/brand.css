@@ -1,0 +1,18 @@
+@font-face { font-family:"Manrope Variable"; font-style:normal; font-display:swap; font-weight:200 800; src:url("/static/fonts/manrope-latin.woff2") format("woff2-variations"), url("/static/fonts/manrope-latin.woff2") format("woff2"); }
+
+.hz-logo { display:inline-flex; align-items:center; gap:10px; width:max-content; text-decoration:none; }
+.hz-logo__mark { display:grid; place-items:center; flex:none; width:37px; height:37px; border-radius:12px; background:#bff0d2; color:#19382b; }
+.hz-logo__mark svg { width:20px; height:20px; display:block; }
+.hz-logo__word { font-family:"Manrope Variable",Manrope,sans-serif; font-weight:850; font-size:30px; line-height:1; letter-spacing:-.09em; color:#20382d; }
+.hz-logo__dot { color:#3c8763; }
+.hz-logo--dark .hz-logo__word { color:#f6fbf7; }
+.hz-logo--dark .hz-logo__dot { color:#a8eac3; }
+.hz-logo--small { gap:8px; }
+.hz-logo--small .hz-logo__mark { width:30px; height:30px; border-radius:10px; }
+.hz-logo--small .hz-logo__mark svg { width:16px; height:16px; }
+.hz-logo--small .hz-logo__word { font-size:24px; }
+
+.property-photo { display:block; width:100%; height:150px; object-fit:cover; border-radius:15px 15px 0 0; }
+.workspace-property .property-photo + .card__body { padding-top:14px; }
+.property-photo--cover { height:220px; border-radius:15px; margin:0 0 22px; }
+@media (max-width: 720px) { .property-photo--cover { height:150px; margin-bottom:16px; } }

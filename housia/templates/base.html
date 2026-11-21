@@ -1,4 +1,4 @@
-{% from '_macros.html' import flash_messages %}
+{% from '_macros.html' import flash_messages, brand_logo %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -7,13 +7,13 @@
   <title>{% block title %}HOUSIA{% endblock %}</title>
   <link rel="stylesheet" href="/static/style.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='workspace.css') }}">
+  <link rel="stylesheet" href="/static/brand.css">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   {% block head %}{% endblock %}
 </head>
 <body class="app-shell">
   <aside class="sidebar">
-    <a href="/" class="brand" aria-label="HOUSIA home">
-      <span class="brand__mark">h</span><span>HOUSIA</span>
-    </a>
+    {{ brand_logo('light') }}
     <span class="sidebar__eyebrow">LANDLORD SPACE</span>
     <nav class="sidebar-nav" aria-label="Main navigation">
       <a class="sidebar-nav__item {% if request.path == '/' %}is-active{% endif %}" href="/">

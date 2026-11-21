@@ -49,3 +49,16 @@ def test_dt_filter(client):
 def test_dashboard_links_to_the_demo_page(client):
     html = client.get("/").get_data(as_text=True)
     assert 'href="/demo"' in html and "Open demo" in html
+
+
+def test_dashboard_shows_new_logo_and_photos(client):
+    client.post("/demo/reset")
+    html = client.get("/").get_data(as_text=True)
+    assert "housia<span" in html and "M2.586 17.414" in html
+    assert '<img class="property-photo" src="/static/photos/' in html
+
+
+def test_brand_assets_are_served(client):
+    for path in ("/static/brand.css", "/static/favicon.svg", "/static/fonts/manrope-latin.woff2",
+                 "/static/photos/eixample.jpg", "/static/photos/gracia.jpg", "/static/photos/eixample-bedroom.jpg"):
+        assert client.get(path).status_code == 200, path
