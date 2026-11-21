@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}HOUSIA{% endblock %} - HOUSIA</title>
+<link rel="stylesheet" href="/static/style.css">
+{% block head %}{% endblock %}
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/">HOUSIA</a>
+  <nav class="topnav">
+    <a href="/demo">Demo</a>
+    <a href="/inbox">Inbox ({{ unread_count|default(0) }})</a>
+    <a href="/mock/inbox">Mock portal</a>
+  </nav>
+  <div class="topbar-tools">
+    <span class="clock">Simulated time: {{ now|default("") }}{% if clock_offset_min %} ({{ clock_offset_min }} min offset){% endif %}</span>
+    <form method="post" action="/demo/clock" class="inline">
+      <input type="hidden" name="minutes" value="10">
+      <button type="submit">+10 min</button>
+    </form>
+    <form method="post" action="/demo/clock" class="inline">
+      <input type="hidden" name="minutes" value="30">
+      <button type="submit">+30 min</button>
+    </form>
+    <form method="post" action="/demo/reset" class="inline">
+      <button type="submit">Reset demo</button>
+    </form>
+  </div>
+</header>
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="flashes">
+  {% for category, message in messages %}
+  <div class="flash {{ category }}">{{ message }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+<main class="container">
+{% block content %}{% endblock %}
+</main>
+</body>
+</html>

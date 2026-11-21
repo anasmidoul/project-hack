@@ -18,7 +18,7 @@ The demo has two key moments:
 
 | Topic | Decision |
 |---|---|
-| Backend | Python 3.11+, Flask, Jinja templates |
+| Backend | Python 3.12 managed with `uv`, Flask, Jinja templates |
 | Frontend | HTML and CSS, rendered by the server. No JavaScript framework. |
 | Storage | One SQLite file |
 | Language | English everywhere |
@@ -114,7 +114,7 @@ The listing is live, so messages in the real inbox come from real people.
 
 ## Timing
 
-The full scope does not fit in two hours. It is 22 work units, and the slow parts are the ones
+The full scope does not fit in two hours. It is 23 work units, and the slow parts are the ones
 agents cannot speed up: the skeleton that everyone waits for, joining units that were built
 against stubs, and the browser automation on a site we do not control. Estimate, not measured:
 about four hours for three people with agents. So the work is in two blocks.

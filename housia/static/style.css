@@ -1,0 +1,19 @@
+/* Neutral baseline. Unit C1 will replace this file. */
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; line-height: 1.5; color: #222; background: #f6f6f4; }
+a { color: #1a4fa3; }
+.topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 8px 16px; background: #1f2937; color: #fff; }
+.topbar a { color: #fff; text-decoration: none; }
+.brand { font-weight: 700; letter-spacing: 0.05em; }
+.topnav { display: flex; gap: 12px; }
+.topbar-tools { margin-left: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.85rem; }
+form.inline { display: inline; margin: 0; }
+.container { max-width: 1100px; margin: 0 auto; padding: 16px; }
+.container-mobile { max-width: 420px; margin: 0 auto; padding: 16px; }
+.flashes { padding: 8px 16px; }
+.flash { padding: 8px 12px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #ccc; background: #fff; }
+.flash.ok { background: #e6f4ea; border-color: #34a853; color: #14532d; }
+.flash.error { background: #fdecea; border-color: #d93025; color: #7f1d1d; }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid #ccc; margin-bottom: 16px; }
+.tabs a { padding: 8px 12px; text-decoration: none; color: #444; }
+.tabs a.active { border-bottom: 2px solid #1a4fa3; font-weight: 600; color: #1a4fa3; }

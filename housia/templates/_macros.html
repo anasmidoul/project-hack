@@ -1,0 +1,16 @@
+{#
+  Shared macros are documented here by unit C1.
+  Placeholder: C1 replaces this file and lists every shared macro and CSS class below.
+#}
+
+{% macro property_tabs(property, active) %}
+{% set pid = property.id if property else "" %}
+<nav class="tabs">
+  <a href="/properties/{{ pid }}" class="{{ 'active' if active == 'overview' }}">Overview</a>
+  <a href="/properties/{{ pid }}/applications" class="{{ 'active' if active == 'applications' }}">Applications</a>
+  <a href="/properties/{{ pid }}/evaluation" class="{{ 'active' if active == 'evaluation' }}">Evaluation</a>
+  <a href="/properties/{{ pid }}/schedule" class="{{ 'active' if active == 'schedule' }}">Schedule</a>
+  <a href="/properties/{{ pid }}/contract" class="{{ 'active' if active == 'contract' }}">Contract</a>
+  <a href="/properties/{{ pid }}/conversations" class="{{ 'active' if active == 'conversations' }}">Conversations</a>
+</nav>
+{% endmacro %}

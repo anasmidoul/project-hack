@@ -22,7 +22,8 @@ Contents: 1 Rules · 2 Architecture · 3 Units and file ownership · 4 Git and a
    function and template. Other units may be unfinished; call their documented signature anyway
    and use fakes in your tests.
 5. **English** for interface text, code and comments.
-6. **No new dependencies** without asking the main backend person (`requirements.txt` is frozen).
+6. **No new dependencies** without asking the main backend person (`pyproject.toml` and
+   `uv.lock` are frozen). Python and packages are managed with `uv`; do not use `pip`.
 7. **No personal data goes to an AI model.** Text for a model is sent only through
    `housia.llm.complete`, which masks names, contact details and identity numbers first
    (section 7, "privacy.py and llm.py"). No other file imports a model SDK, except
@@ -87,11 +88,13 @@ All paths are relative to the repo root. `S0` is built first and merged before a
 `housia/__init__.py` (app factory, registers every blueprint, context processor, `tick` hook),
 `housia/config.py`, `housia/db.py`, `housia/schema.sql`, `housia/core.py`,
 `housia/channels/__init__.py`, `housia/channels/base.py`, `housia/services/__init__.py`,
-`housia/web/__init__.py`, `tests/conftest.py`, `run.py`, `requirements.txt`, `.gitignore`,
+`housia/web/__init__.py`, `tests/conftest.py`, `tests/test_core.py`, `tests/test_app.py`,
+`run.py`, `pyproject.toml`, `uv.lock`, `.python-version`, `.gitignore`,
 `.env.example`, `README.md`, `PLAN.md`, `DESIGN.md`.
 
-`requirements.txt` holds: `flask`, `python-dotenv`, `pypdf` (text of uploaded PDFs),
-`browser-use==1.0.6`, `pytest`, `openai`.
+The project uses `uv` with Python 3.12. `pyproject.toml` holds: `flask`, `python-dotenv`,
+`pypdf` (text of uploaded PDFs), `openai`, `browser-use==1.0.6`, and `pytest` as a dev
+dependency. Set up with `uv sync`. Run everything through `uv run`.
 
 The skeleton also creates **a stub of every file listed below** (functions with the documented
 signature that raise `NotImplementedError` or return an empty value; templates with a title
@@ -102,7 +105,7 @@ only). After the merge, those stubs belong to their units.
 | Unit | Files |
 |---|---|
 | **A1** Mock channel | `housia/channels/mock.py`, `housia/web/mock_inbox.py`, `tests/test_mock_channel.py` |
-| **A2** Idealista channel | `housia/channels/idealista.py`, `scripts/idealista_probe.py` |
+| **A2** Idealista channel | `housia/channels/idealista.py`, `scripts/idealista_probe.py`, `tests/test_idealista_channel.py` |
 | **A3** Conversations and worker | `housia/services/conversations.py`, `housia/worker.py`, `tests/test_conversations.py`, `tests/test_worker.py` |
 | **A4** Reply engine | `housia/services/reply_engine.py`, `tests/test_reply_engine.py` |
 | **A5** Conversation routes | `housia/web/conversations.py`, `tests/test_web_conversations.py` |
@@ -165,7 +168,7 @@ The two blocks are described in PLAN.md, "Timing".
 - `main` always runs. Only merged, tested units go in.
 - One branch per unit: `unit/b4-scheduling`, `unit/c5-applicant`, …
 - Merge a unit as soon as its own tests pass. Small and often.
-- Before merging: `git fetch && git rebase origin/main`, run `pytest`, then merge. Because
+- Before merging: `git fetch && git rebase origin/main`, run `uv run pytest`, then merge. Because
   files do not overlap, the rebase should never conflict. If it does, someone broke rule 1:
   stop and find out who.
 
@@ -176,8 +179,8 @@ Each agent gets its own folder, so agents on one machine never share a working d
 ```bash
 git worktree add ../housia-b4 -b unit/b4-scheduling origin/main
 cd ../housia-b4
-source ../hackathon/.venv/bin/activate      # one shared virtualenv is enough
-PORT=5004 HOUSIA_DB=instance/b4.db python run.py
+uv sync                                      # fast: packages come from uv's cache
+PORT=5004 HOUSIA_DB=instance/b4.db uv run python run.py
 ```
 
 Use a different `PORT` and `HOUSIA_DB` per worktree. `instance/` is git-ignored.
@@ -196,11 +199,11 @@ Do:
 - Other units may still be stubs. Do not implement or edit them. Use fakes in tests.
 
 Do not:
-- Edit any file outside your list, including frozen files, style.css or requirements.txt.
+- Edit any file outside your list, including frozen files, style.css or pyproject.toml.
 - Change a signature, route, form field or template variable. If the contract is wrong or
   incomplete, stop and report exactly what needs to change.
 
-Finish when: `pytest tests/<your tests>` passes and `python run.py` starts. Report what you
+Finish when: `uv run pytest tests/<your tests>` passes and `uv run python run.py` starts. Report what you
 built, what you could not verify, and any contract problem you found.
 ```
 
@@ -376,7 +379,19 @@ def applicant_url(token) -> str             # config.BASE_URL + /a/<token>
 The app factory also:
 - runs `scheduling.tick(conn, core.now(conn))` before every request, so expired offers move on;
 - gives every template: `now`, `clock_offset_min`, `unread_count`, `nav_properties`,
-  `worker_paused`.
+  `worker_paused`;
+- provides the template filter `dt`: `{{ slot.starts_at | dt }}` → `Mon 23 Nov, 09:00`. It takes
+  a stored ISO string or a `datetime`, and an optional `strftime` format.
+
+Notes:
+- In templates `now` is a `datetime`, while stored dates are ISO text. Do not compare them in
+  a template. Routes pass ready-made flags and states instead (for example the `state` of each
+  slot from `slots_for_applicant`).
+- `invite_limit` counts every applicant who was ever given calendar access, including those
+  who later cancel, miss the viewing or are closed. That is intended: it is the number of
+  people the landlord is willing to invite.
+- `core.set_status` checks that the status name is valid, not that the move is allowed. Each
+  unit checks its own transitions (status flow table, section 5).
 
 `tests/conftest.py` provides `conn` (fresh in-memory database with the schema), `client` (Flask
 test client on a temporary database) and `t0` (a fixed `datetime`, a Monday at 09:00).
@@ -624,6 +639,9 @@ def make_message_id(conversation_id: str, text: str, received_at: str | None) ->
 
 # housia/channels/__init__.py
 def get_channel(name: str) -> Channel
+    # returns MockChannel() from channels/mock.py, IdealistaChannel() from channels/idealista.py
+    # or BadiChannel() from channels/badi.py. Each takes no arguments. Imports are lazy, so the
+    # web app and tests never import browser-use.
 ```
 Both methods are synchronous. A channel that uses async code wraps it with `asyncio.run`.
 `fetch_new_messages` may return a message twice; deduplication is the job of
@@ -640,7 +658,8 @@ Both methods are synchronous. A channel that uses async code wraps it with `asyn
 Facts from the `browser-use` docs, checked 2026-11-21. Check docs.browser-use.com again before
 relying on details; the API changed a lot between versions.
 
-- Python 3.11+. Pin `browser-use==1.0.6`. Run `browser-use install` once for a local Chromium.
+- Already in `pyproject.toml` as `browser-use==1.0.6`. Run `uv run browser-use install` once
+  for a local Chromium.
 - Logged-in session: `Browser('chromium', user_data_dir=config.CHROME_PROFILE_DIR)` keeps its
   own logins between runs. Log in to Idealista **by hand** once in that window. Do not automate
   the login. (Alternative: `Browser('chrome')` attaches to your open Chrome after you allow
@@ -737,8 +756,25 @@ Same interface, same approach as A2. Only after everything else works.
 
 ## 9. Pages, routes and forms
 
-Blueprint name = file name in `housia/web/`. All POST routes redirect back to the page they came
-from and use `flash(message, 'ok' | 'error')`.
+Blueprint name = file name in `housia/web/`; each file exposes it as `bp`. All POST routes
+redirect back to the page they came from and use `flash(message, 'ok' | 'error')`.
+
+Links, form actions and redirects use the **literal paths** in this section
+(`action="/a/{{ application.token }}/book"`). Do not use `url_for` to reach another unit's
+route; endpoint function names are not part of the contract.
+
+Redirect targets for POST routes whose path has no page id:
+- `/slots/<id>/delete`, `/slots/<id>/cancel`, `/slots/<id>/attendance` → `/properties/<property_id>/schedule`
+  (the attendance form is on `schedule.html`).
+- `/messages/<id>/approve`, `/messages/<id>/discard` → `/conversations/<conversation_id>`.
+- `/worker/pause` → the page it was sent from (`request.referrer`), else `/`. Its form is on
+  `conversations.html`.
+- `POST /properties` → `/properties/<new id>`; `POST /properties/<id>` → `/properties/<id>`.
+  On a validation error, back to the form.
+
+Template blocks provided by `base.html` and `base_mobile.html`: `title`, `head`, `content`.
+The tab bar macro is `property_tabs(property, active)` in `_macros.html`, where `active` is one
+of `overview`, `applications`, `evaluation`, `schedule`, `contract`, `conversations`.
 
 ### Landlord pages (extend `base.html`)
 
@@ -876,8 +912,8 @@ Secrets go in `.env` (git-ignored). `.env.example` lists the names only.
 
 - [ ] Only the unit's files changed (`git diff --stat origin/main`).
 - [ ] Signatures, routes, form fields and template variables match this document.
-- [ ] The unit's tests pass; the full `pytest` run is not worse than on `main`.
-- [ ] `python run.py` starts and the unit's pages load after `POST /demo/reset`.
+- [ ] The unit's tests pass; the full `uv run pytest` run is not worse than on `main`.
+- [ ] `uv run python run.py` starts and the unit's pages load after `POST /demo/reset`.
 - [ ] No secrets, no real personal data, no database file committed.
 - [ ] Anything the contract got wrong is reported to the main backend person, not patched locally.
 
