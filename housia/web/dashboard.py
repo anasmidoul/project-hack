@@ -36,11 +36,29 @@ def index():
 
 
 def _workspace_counts(conn, property_id):
-    """Counts for the owner workspace (imported enquiries): enquiries, to_review."""
-    row = conn.execute(
-        "SELECT COUNT(*) AS enquiries, "
-        "COALESCE(SUM(document_received = 1 AND decision IS NULL), 0) AS to_review "
-        "FROM imported_enquiries WHERE property_id = ?",
+    """Counts on a property card.
+
+    enquiries: every applicant of the property, whatever the channel (portal message, public
+    link, phone, imported list).
+    to_review: what is waiting for the landlord: documents uploaded and not yet reviewed
+    (including imported enquiries without a decision), plus conversations with a reply that
+    needs approval.
+    """
+    enquiries = conn.execute(
+        "SELECT COUNT(*) FROM applications WHERE property_id = ?", (property_id,)
+    ).fetchone()[0]
+    documents = conn.execute(
+        "SELECT COUNT(*) FROM applications a WHERE a.property_id = ? AND ("
+        " a.status = 'docs_uploaded' OR EXISTS ("
+        "  SELECT 1 FROM imported_enquiries i WHERE i.application_id = a.id"
+        "  AND i.document_received = 1 AND i.decision IS NULL AND a.status <> 'closed'))",
         (property_id,),
-    ).fetchone()
-    return dict(row)
+    ).fetchone()[0]
+    replies = conn.execute(
+        "SELECT COUNT(*) FROM conversations c WHERE c.property_id = ? AND ("
+        " c.status = 'needs_landlord' OR EXISTS ("
+        "  SELECT 1 FROM messages m WHERE m.conversation_id = c.id"
+        "  AND m.direction = 'out' AND m.status = 'draft'))",
+        (property_id,),
+    ).fetchone()[0]
+    return {"enquiries": enquiries, "to_review": documents + replies}

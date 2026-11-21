@@ -62,3 +62,21 @@ def test_brand_assets_are_served(client):
     for path in ("/static/brand.css", "/static/favicon.svg", "/static/fonts/manrope-latin.woff2",
                  "/static/photos/eixample.jpg", "/static/photos/gracia.jpg", "/static/photos/eixample-bedroom.jpg"):
         assert client.get(path).status_code == 200, path
+
+
+def test_dashboard_counts_include_portal_conversations(client):
+    from housia import db
+
+    client.post("/demo/reset")
+    with db.tx() as conn:
+        total = conn.execute("SELECT COUNT(*) FROM applications WHERE property_id = 1").fetchone()[0]
+        waiting = conn.execute(
+            "SELECT COUNT(*) FROM applications WHERE property_id = 1 AND status = 'docs_uploaded'"
+        ).fetchone()[0]
+        now = "2026-11-23T09:00:00"
+        conn.execute("INSERT INTO conversations (property_id, channel, external_id, contact_name, status, created_at) "
+                     "VALUES (1, 'mock', 't-99', 'Test Person', 'needs_landlord', ?)", (now,))
+    html = client.get("/").get_data(as_text=True)
+    assert total > 0
+    assert f"{total} enquiries · {waiting + 1} to review" in html
+    assert "Imported enquiries" not in html

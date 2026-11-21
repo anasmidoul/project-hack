@@ -9,7 +9,7 @@
 {% set totals = namespace(enquiries=0, review=0) %}
 {% for prop in properties %}{% set totals.enquiries = totals.enquiries + prop.enquiries %}{% set totals.review = totals.review + prop.to_review %}{% endfor %}
 <section class="stat-grid workspace-stats" aria-label="Portfolio overview">
-  {% for value, label in [(properties|length, 'Properties'), (totals.enquiries, 'Imported enquiries'), (totals.review, 'Ready for review'), (upcoming_viewings|length, 'Viewings in 14 days')] %}
+  {% for value, label in [(properties|length, 'Properties'), (totals.enquiries, 'Enquiries'), (totals.review, 'Waiting for you'), (upcoming_viewings|length, 'Viewings in 14 days')] %}
   <article class="stat-card"><strong class="stat-card__value">{{ value }}</strong><span class="stat-card__label">{{ label }}</span></article>
   {% endfor %}
 </section>
