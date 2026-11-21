@@ -3,14 +3,37 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mock portal - Inbox</title>
+<title>Messages - Portalia</title>
+<link rel="stylesheet" href="/static/pages/mock_portal.css">
 </head>
 <body>
-<h1>Mock portal - Inbox</h1>
-<p>Placeholder page. Template unit: C6. Standalone document, does not extend base.html.</p>
-<p>Context variables:</p>
-<ul>
-  <li>threads</li>
+<header class="site-header">
+  <span class="brand">Portalia</span>
+  <nav>
+    <a href="/mock/inbox">Inbox (landlord)</a>
+    <a href="/mock/candidate">Write as a candidate</a>
+  </nav>
+</header>
+<p class="demo-note">Demo portal — fictional data</p>
+<main>
+{% for category, message in get_flashed_messages(with_categories=true) %}
+<p class="flash {{ category }}" role="status">{{ message }}</p>
+{% endfor %}
+<h1>Messages</h1>
+{% if threads %}
+<ul class="conversations">
+{% for t in threads %}
+  <li class="{{ 'unanswered' if t.unanswered else 'answered' }}" data-conversation-id="{{ t.id }}">
+    <a class="contact" href="/mock/inbox/{{ t.id }}">{{ t.contact_name }}</a>
+    <p class="meta">Conversation {{ t.id }}{% if t.listing_ref %} · Listing {{ t.listing_ref }}{% endif %}</p>
+    <p class="preview">{{ (t.last_message or '') | truncate(100) }}</p>
+    <span class="status">{{ 'Unanswered' if t.unanswered else 'Answered' }}</span>
+  </li>
+{% endfor %}
 </ul>
+{% else %}
+<p>No messages yet.</p>
+{% endif %}
+</main>
 </body>
 </html>

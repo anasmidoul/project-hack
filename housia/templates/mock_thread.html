@@ -3,15 +3,43 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mock portal - Conversation</title>
+<title>{{ thread.contact_name }} - Portalia</title>
+<link rel="stylesheet" href="/static/pages/mock_portal.css">
 </head>
 <body>
-<h1>Mock portal - Conversation</h1>
-<p>Placeholder page. Template unit: C6. Standalone document, does not extend base.html.</p>
-<p>Context variables:</p>
-<ul>
-  <li>thread</li>
-  <li>messages</li>
-</ul>
+<header class="site-header">
+  <span class="brand">Portalia</span>
+  <nav>
+    <a href="/mock/inbox">Inbox (landlord)</a>
+    <a href="/mock/candidate">Write as a candidate</a>
+  </nav>
+</header>
+<p class="demo-note">Demo portal — fictional data</p>
+<main>
+{% for category, message in get_flashed_messages(with_categories=true) %}
+<p class="flash {{ category }}" role="status">{{ message }}</p>
+{% endfor %}
+<section data-conversation-id="{{ thread.id }}">
+  <h1>{{ thread.contact_name }}</h1>
+  <p class="meta">Conversation {{ thread.id }}</p>
+  {% if thread.listing_ref %}<p class="meta">Listing {{ thread.listing_ref }}</p>{% endif %}
+  <h2>Messages</h2>
+  <div class="messages">
+  {% for m in messages %}
+    <article class="message" data-sender="{{ m.sender }}">
+      <span class="who">{% if m.sender == 'candidate' %}Candidate {{ thread.contact_name }}{% else %}You (landlord){% endif %}</span>
+      <time>{{ m.created_at | dt }}</time>
+      <p class="body">{{ m.body }}</p>
+    </article>
+  {% endfor %}
+  </div>
+</section>
+<form class="panel" method="post" action="/mock/inbox/{{ thread.id }}/send">
+  <label for="reply-body">Your reply</label>
+  <textarea name="body" id="reply-body" required></textarea>
+  <button type="submit">Send</button>
+</form>
+<a class="back" href="/mock/inbox">Back to inbox</a>
+</main>
 </body>
 </html>

@@ -3,14 +3,49 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mock portal - Candidate</title>
+<title>Write as a candidate - Portalia</title>
+<link rel="stylesheet" href="/static/pages/mock_portal.css">
 </head>
 <body>
-<h1>Mock portal - Candidate</h1>
-<p>Placeholder page. Template unit: C6. Standalone document, does not extend base.html.</p>
-<p>Context variables:</p>
-<ul>
-  <li>threads</li>
+<header class="site-header">
+  <span class="brand">Portalia</span>
+  <nav>
+    <a href="/mock/inbox">Inbox (landlord)</a>
+    <a href="/mock/candidate">Write as a candidate</a>
+  </nav>
+</header>
+<p class="demo-note">Demo portal — fictional data</p>
+<main>
+{% for category, message in get_flashed_messages(with_categories=true) %}
+<p class="flash {{ category }}" role="status">{{ message }}</p>
+{% endfor %}
+<h1>Write as a candidate</h1>
+<form class="panel" method="post" action="/mock/candidate/send">
+  <label for="thread-id">Conversation</label>
+  <select name="thread_id" id="thread-id">
+    <option value="">New conversation</option>
+    {% for t in threads %}<option value="{{ t.id }}">Conversation {{ t.id }} — {{ t.contact_name }}</option>{% endfor %}
+  </select>
+  <label for="contact-name">Your name (for a new conversation)</label>
+  <input type="text" name="contact_name" id="contact-name">
+  <label for="message-body">Message</label>
+  <textarea name="body" id="message-body" required></textarea>
+  <button type="submit">Send message</button>
+</form>
+<h2>Existing conversations</h2>
+{% if threads %}
+<ul class="conversations">
+{% for t in threads %}
+  <li class="{{ 'unanswered' if t.unanswered else 'answered' }}">
+    <a class="contact" href="/mock/inbox/{{ t.id }}">{{ t.contact_name }}</a>
+    <p class="meta">Conversation {{ t.id }}{% if t.listing_ref %} · Listing {{ t.listing_ref }}{% endif %}</p>
+    <p class="preview"><strong>{{ 'Candidate' if t.unanswered else 'Landlord reply' }}:</strong> {{ (t.last_message or '') | truncate(160) }}</p>
+  </li>
+{% endfor %}
 </ul>
+{% else %}
+<p>No messages yet.</p>
+{% endif %}
+</main>
 </body>
 </html>
