@@ -71,6 +71,15 @@ Requests through the tunnel (they carry Cloudflare's forwarding headers):
   including the dashboard, property pages, `/demo` and its reset and clock, `/inbox`,
   `/worker/pause`, the CSV exports and the whole mock portal (`/mock/...`). Without
   `OWNER_PASSWORD` these answer 403. Signed-in form posts from another site are refused.
+- **Judge sign-in (optional, read-only):** set `JUDGE_PASSWORD` and sign in with username
+  `judge`. The judge sees every page the owner sees (GET only) and a "Judge view · read-only"
+  label; any other action (reset, clock, approving, editing, cancelling...) is refused with a
+  message and changes nothing. The one exception: writing a message as a candidate in the mock
+  portal (`POST /mock/candidate/send`). The judge login needs `OWNER_PASSWORD` too and is off
+  when `JUDGE_PASSWORD` is empty or equal to `OWNER_PASSWORD`. The same rules apply to local
+  requests that need sign-in. Nothing is stored in the session: each request is checked from
+  its own credentials, so a browser signed in as judge never becomes owner without the owner
+  password.
 
 Requests made directly on this machine (no forwarding headers) behave as before.
 

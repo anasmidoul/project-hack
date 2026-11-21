@@ -38,8 +38,9 @@ print(config.CHANNEL)
 print(config.PORT)
 print("yes" if config.OWNER_PASSWORD else "no")
 print("yes" if config.SECRET_KEY and config.SECRET_KEY != "dev" else "no")
+print("yes" if config.JUDGE_PASSWORD and config.JUDGE_PASSWORD != config.OWNER_PASSWORD else "no")
 ')" || die "could not read the HOUSIA configuration (run: uv sync)."
-{ read -r cfg_channel; read -r cfg_port; read -r has_password; read -r has_secret; } <<<"$settings"
+{ read -r cfg_channel; read -r cfg_port; read -r has_password; read -r has_secret; read -r has_judge; } <<<"$settings"
 
 [[ "$cfg_channel" == "mock" ]] \
   || die "CHANNEL=${cfg_channel} (from .env) is not allowed. The public demo uses only the mock portal:
@@ -138,6 +139,9 @@ echo "HOUSIA public demo is running."
 echo "  Public address:   ${PUBLIC_URL}"
 echo "  Applicant page:   ${PUBLIC_URL}/apply/1   (personal links: ${PUBLIC_URL}/a/<token>)"
 echo "  Owner pages:      ${PUBLIC_URL}/demo   (sign in as 'owner' with OWNER_PASSWORD)"
+if [[ "$has_judge" == "yes" ]]; then
+  echo "  Judge login:      available, read-only (sign in as 'judge' with JUDGE_PASSWORD)"
+fi
 echo "  Database:         ${HOUSIA_DB}   Worker: $( ((RUN_WORKER)) && echo on || echo off )"
 echo "  Logs:             instance/demo-*.log"
 echo "Press Ctrl-C to stop the tunnel, the app and the worker."

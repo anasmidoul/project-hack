@@ -54,4 +54,6 @@ SECRET_KEY: str = _str("SECRET_KEY", "dev")
 # Optional local demo data loaded after the seed on reset (see housia/demo_extra.py).
 DEMO_EXTRA_FILE: str = _str("DEMO_EXTRA_FILE", "instance/demo_extra.json")
 OWNER_PASSWORD: str | None = _str("OWNER_PASSWORD")
+# Optional read-only sign-in (username "judge"); off when empty or equal to OWNER_PASSWORD.
+JUDGE_PASSWORD: str | None = _str("JUDGE_PASSWORD")
 WORKSPACE_AI_NOTES: bool = _str("WORKSPACE_AI_NOTES", "0") == "1"
