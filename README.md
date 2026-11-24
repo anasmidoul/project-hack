@@ -1,113 +1,186 @@
 # HOUSIA
 
-A rental platform where the landlord's side runs by itself. HOUSIA reads messages from a
-portal inbox (Idealista, or a built-in mock portal), answers them, and takes each candidate
-through application, documents, ranking, viewing, waiting list, final choice and contract.
+HOUSIA is a rental workflow prototype for landlords. It brings enquiries, applications,
+document review, viewing bookings, and contract decisions into one small Flask app. A mock
+portal makes the full demo usable without a third-party account.
 
-- What to build and why: [PLAN.md](PLAN.md)
-- Technical contract (files, schema, signatures, routes): [DESIGN.md](DESIGN.md)
+**Start here:** [the project guide](PLAN.md) describes the product plan, and [DESIGN.md](DESIGN.md)
+documents the technical design.
 
-## Setup
+## Quick start
 
-Needs [uv](https://docs.astral.sh/uv/). Python 3.12 is installed by uv.
+You need Python 3.12 or later and [`uv`](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync
-cp .env.example .env      # optional; edit values as needed
 ```
 
-## Run the web app
+Create a fresh demo database with sample properties, applicants, viewing slots, and mock
+messages, then start the app:
 
 ```bash
-uv run python run.py      # http://localhost:5000
+HOUSIA_DB=instance/demo.db uv run python -c "from housia import db; db.reset_db()"
+HOUSIA_DB=instance/demo.db uv run python run.py
 ```
 
-Use another port and database per worktree, for example
-`PORT=5004 HOUSIA_DB=instance/b4.db uv run python run.py`.
+Open [http://localhost:5000/guide](http://localhost:5000/guide) for a guided walkthrough, or
+[http://localhost:5000/](http://localhost:5000/) for the dashboard. The reset command replaces
+all data in the database named by `HOUSIA_DB`; the example above uses its own `instance/demo.db`
+file. The app uses SQLite and creates the database schema automatically, but a new database
+does not contain the sample data until it is reset.
 
-## Run the worker
-
-The worker reads portal messages, writes replies and sends approved ones.
+To use the default database and settings instead, copy the example configuration first:
 
 ```bash
-uv run python -m housia.worker          # loop
-uv run python -m housia.worker --once   # one pass
+cp .env.example .env
+uv run python run.py
 ```
 
-The channel is set by `CHANNEL` (`mock` by default).
+The mock channel and template reply engine are the defaults. `.env` is optional for a local run.
 
-## Run the tests
+## Try the demo
+
+The seeded data supports two walkthroughs:
+
+1. **Mock portal:** open `/mock/inbox`, send or inspect an enquiry, then run the worker to see
+   HOUSIA process replies.
+2. **Rental workflow:** from the dashboard, open a property to review applicants, documents,
+   evaluation, viewings, attendance, and the contract. Applicant links let a candidate submit
+   details, share a demo document, and manage a viewing.
+
+Use the guide's demo clock to move simulated time forward, and **Reset demo** to reload the seed
+data. Resetting replaces the selected database contents.
+
+Run the worker in a second terminal, pointing it at the same database as the web app:
+
+```bash
+HOUSIA_DB=instance/demo.db uv run python -m housia.worker
+```
+
+Use `--once` to process a single pass and exit:
+
+```bash
+HOUSIA_DB=instance/demo.db uv run python -m housia.worker --once
+```
+
+## What the app includes
+
+- **Rental pipeline:** properties, public application links, applicant records, document
+  requests, assisted or automatic applicant evaluation, viewing slots, a waiting list, a final
+  candidate, and a contract status.
+- **Mock portal and worker:** the local portal simulates incoming enquiries. The worker reads
+  messages, prepares replies, and handles sending according to each property's reply mode.
+- **Idealista browser channel:** an experimental browser-use integration can read and reply to
+  an Idealista inbox. It requires a manually signed-in Chrome profile, an OpenAI API key, and a
+  browser model. Sending to a non-local portal is restricted by `SEND_ALLOWLIST`.
+- **Imported-enquiry workspace:** import a CSV from Idealista, Fotocasa, or WhatsApp; review
+  readable PDF payslips; prepare a decision and reply; and schedule viewings. Replies are copied
+  to the original channel by the landlord—the workspace does not send them through provider
+  APIs.
+- **Private demo options:** the public demo script supports an optional read-only judge login
+  and isolated guest copies of the demo.
+
+The core applicant workflow uses bundled demo documents. The imported-enquiry workspace accepts
+PDF payslips and extracts labelled income locally; it does not authenticate documents or run
+OCR. Any screening result is for the landlord to review.
+
+## Configuration
+
+Copy `.env.example` to `.env` to configure the app. These are the settings most people need:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `HOUSIA_DB` | `instance/housia.db` | SQLite database path, relative to the repository root unless absolute. |
+| `PORT` | `5000` | Local web server port. |
+| `BASE_URL` | `http://localhost:5000` | Base URL used to create applicant links. |
+| `CHANNEL` | `mock` | Worker channel. The public demo only allows `mock`. |
+| `REPLY_ENGINE` | `template` | Reply generation mode; `llm` requires an OpenAI API key. |
+| `OPENAI_API_KEY` | unset | Used by model-backed replies, document summaries, and browser automation. |
+| `REPLY_MODEL` | unset | Model for generated replies and optional workspace screening notes. |
+| `BROWSER_MODEL` | unset | Model that drives the Idealista browser integration. |
+| `IDEALISTA_INBOX_URL` | local mock inbox | Inbox URL opened by the Idealista integration. |
+| `SEND_ALLOWLIST` | empty | Contacts or conversation IDs allowed for non-local Idealista sending. |
+| `SECRET_KEY` | development key | Set a unique secret before enabling owner sign-in or guest demos. |
+| `OWNER_PASSWORD` | unset | Enables owner sign-in (username `owner`). Required by the public demo script. |
+| `JUDGE_PASSWORD` | unset | Optional read-only judge sign-in (username `judge`); must differ from owner password. |
+| `WORKSPACE_AI_NOTES` | `0` | Set to `1` to enable optional AI screening explanations. |
+| `GUEST_LINK_CODE` | unset | Enables private guest demos when used with the public demo script. |
+
+Other options, including worker timing, Chrome profile, browser domain limits, and sandbox
+capacity, are listed in [.env.example](.env.example).
+
+### Idealista setup
+
+The normal local demo needs no portal login. To try the experimental Idealista channel, configure
+`CHANNEL=idealista`, set `IDEALISTA_INBOX_URL`, `BROWSER_MODEL`, and `OPENAI_API_KEY`, and log in
+manually to the dedicated browser profile:
+
+```bash
+uv run python scripts/idealista_probe.py --login
+uv run python scripts/idealista_probe.py
+```
+
+The probe checks the saved login and sends nothing. Portal automation can be blocked by the site
+and may be restricted by its terms. Use a test account and an explicit `SEND_ALLOWLIST`; the
+default allowlist is empty.
+
+## Optional public demo
+
+[`scripts/demo_public.sh`](scripts/demo_public.sh) runs the app and, by default, the worker behind
+a temporary Cloudflare HTTPS tunnel. Install `cloudflared`, set `OWNER_PASSWORD` in `.env`, then
+run:
+
+```bash
+scripts/demo_public.sh              # app, tunnel, and worker
+scripts/demo_public.sh --no-worker  # app and tunnel only
+```
+
+The script uses the mock portal and a separate `instance/demo.db` by default. It prints a public
+URL; press **Ctrl-C** to stop the processes. Applicant pages are public to anyone with their
+private link. Owner pages require the `owner` username and `OWNER_PASSWORD`. Set a strong,
+unique `SECRET_KEY` for a stable deployment. A distinct `JUDGE_PASSWORD` enables read-only judge
+access. Set `GUEST_LINK_CODE` to print a guest link that gives each visitor a separate copy of
+the demo database. Guest copies are temporary and their capacity is configurable with
+`SANDBOX_MAX`.
+
+## Imported-enquiry workspace details
+
+On a property page, the workspace has **Import**, **Screen**, **Reply**, and **Viewings** steps.
+Download the CSV template in the app; the required columns are `name,thread_ref`. Import one
+channel at a time. WhatsApp references must be international phone numbers, such as
+`+34600123456`. Re-importing an existing thread for the same property and channel is skipped.
+
+Screening checks for labelled net pay in readable English or Spanish payslip PDFs. It flags
+missing, ambiguous, or unreadable evidence for review and does not automatically reject anyone.
+The uploaded PDF is processed for extraction and is not retained; an extracted income amount is
+kept until a decision is recorded. Optional AI explanations send only the screening result
+category to the configured model, not the document, income, or identity. The landlord copies the
+reply into the original Idealista, Fotocasa, or WhatsApp conversation and marks it sent in HOUSIA.
+Viewing times use the app server's local timezone; this flow does not sync Google Calendar.
+
+## Development
+
+Run the test suite with:
 
 ```bash
 uv run pytest
 ```
 
-## Reset the demo
+Useful project areas:
 
-Open the guide (`/guide`) and press "Reset demo" in its "Demo tools" box, or send
-`POST /demo/reset`. This drops the database and loads the seed data again.
+| Path | Contents |
+| --- | --- |
+| `housia/services/` | Rental, scheduling, conversation, and screening rules. |
+| `housia/web/` | Flask routes. |
+| `housia/templates/` and `housia/static/` | Server-rendered pages and styles. |
+| `housia/channels/` | Mock and portal channel integrations. |
+| `tests/` | Automated tests. |
+| `PLAN.md` | Product scope and milestones. |
+| `DESIGN.md` | Technical contracts and implementation details. |
 
-## Public demo
+## Data and security
 
-Shows the app on a public https address through a free Cloudflare quick tunnel (no account),
-so judges can open applicant links on their phones. Needs `cloudflared` on `PATH` (binary from
-Cloudflare's GitHub releases, for example in `~/.local/bin`) and `OWNER_PASSWORD` (in `.env` or
-the environment).
-
-```bash
-scripts/demo_public.sh              # tunnel + app + worker
-scripts/demo_public.sh --no-worker  # tunnel + app only
-```
-
-It prints the public address. Links sent to applicants use it (`BASE_URL`). It always uses the
-mock portal (`CHANNEL=mock`; any other channel is refused) and `instance/demo.db` unless
-`HOUSIA_DB` is set (a missing database is seeded). Logs go to `instance/demo-*.log`. Press
-Ctrl-C to stop the tunnel, the app and the worker.
-
-Requests through the tunnel (they carry Cloudflare's forwarding headers):
-- **Public:** applicant pages and their forms (`/a/<token>...`, `/apply/<id>`, `/viewing/<token>`),
-  `/static/...`, the favicon.
-- **Owner sign-in needed** (username `owner`, password `OWNER_PASSWORD`): everything else,
-  including the dashboard, property pages, the guide (`/guide`) with the demo clock and reset
-  (`POST /demo/clock`, `POST /demo/reset`), `/inbox`,
-  `/worker/pause`, the CSV exports and the whole mock portal (`/mock/...`). Without
-  `OWNER_PASSWORD` these answer 403. Signed-in form posts from another site are refused.
-- **Judge sign-in (optional, read-only):** set `JUDGE_PASSWORD` and sign in with username
-  `judge`. The judge sees every page the owner sees (GET only) and a "Judge view · read-only"
-  label; any other action (reset, clock, approving, editing, cancelling...) is refused with a
-  message and changes nothing. The one exception: writing a message as a candidate in the mock
-  portal (`POST /mock/candidate/send`). The judge login needs `OWNER_PASSWORD` too and is off
-  when `JUDGE_PASSWORD` is empty or equal to `OWNER_PASSWORD`. The same rules apply to local
-  requests that need sign-in. Nothing is stored in the session: each request is checked from
-  its own credentials, so a browser signed in as judge never becomes owner without the owner
-  password.
-
-Requests made directly on this machine (no forwarding headers) behave as before.
-
-**Private guest demos (optional).** Set `GUEST_LINK_CODE` (a long random code of letters,
-digits, `-` and `_`) and the script prints a `Guest link: <public address>/guest/<code>`. Each
-browser that opens it lands on the guide (`/guide`) and gets its own copy of the demo (a SQLite file in `instance/sandboxes/`,
-`SANDBOX_DIR`) and the owner's rights inside it: approve, invite, cancel, reset, move the demo
-clock, add a property. Nothing a guest does reaches other guests or the main database; their
-applicant pages (`/a/<token>`, `/apply/<id>`) in the same browser use their copy too, and the
-worker answers their mock portal messages. New copies start from `instance/sandbox-template.db`
-(`SANDBOX_TEMPLATE`), which the script builds from the demo database at start
-(`uv run python -m housia.sandbox make-template`); without a template, the main database as it
-is at that moment is copied. Applicant tokens are new in every copy. At most `SANDBOX_MAX`
-copies (default 150): when full, copies idle for 30 minutes are removed, otherwise the link
-answers "The demo is full". Copies unused for 12 hours are deleted when the app starts. A wrong
-code, an empty `GUEST_LINK_CODE` or the default `SECRET_KEY` answer 404. Owner and judge
-sign-ins always use the main database, also in a browser that has a guest demo.
-
-## Owner workspace (imported enquiries)
-
-On each property page (steps Import, Screen, Reply, Viewings). For listings whose enquiries arrive outside HOUSIA; independent of the worker.
-
-1. **Import.** Add your existing listing to HOUSIA. Choose Idealista, Fotocasa or WhatsApp and upload a UTF-8 CSV using the downloadable template. Use `name,thread_ref` as the header. For Idealista and Fotocasa, `thread_ref` is the original conversation reference; for WhatsApp, use an international phone number such as `+34600123456`. Import one channel at a time. Re-importing the same thread for the same property and channel does not create a duplicate. The workspace does not fetch contacts automatically or import native WhatsApp chat-text archives.
-2. **Screen.** Set the minimum monthly net income. Copy and send the payslip request from **Reply** so the applicant can upload a PDF through their private link. HOUSIA extracts labelled net pay from readable English or Spanish payslips locally, compares it with the brief and flags missing or ambiguous evidence. It does not authenticate payslips, perform OCR or automatically reject applicants. The raw PDF is not retained after the request. The extracted amount is retained in SQLite until a decision is recorded, then cleared from the record. Optional AI explanations (`WORKSPACE_AI_NOTES=1`, `REPLY_MODEL`, `OPENAI_API_KEY`) send only the result category, not the document, income or identity.
-3. **Reply.** Review the screening result and choose whether to invite or decline. Copy the personalised draft, send it in the original chat, and mark it as sent. WhatsApp opens the recipient chat; for Idealista and Fotocasa, use the imported conversation reference to find the original thread. This is a manual handoff: the workspace does not send messages through provider APIs or verify delivery. Marking an invitation as sent activates the private viewing link.
-4. **Viewings.** Add available times in the built-in HOUSIA agenda. Invited applicants book or cancel on their private page. The slot and the owner's in-app notification update in the same transaction. Times use the app server's local time; configure the process timezone for your rental location. There is no Google Calendar sync in this flow.
-
-### Before sharing real applicant links
-
-This is a single-owner prototype. Use HTTPS, set `BASE_URL` to the public HTTPS origin, and set a strong `SECRET_KEY` and `OWNER_PASSWORD` (owner sign-in username: `owner`). Do not expose the local unauthenticated configuration to the network. Treat viewing URLs as private bearer links and avoid logging their paths. Protect the SQLite database and backups, and define a retention policy for pending enquiries and extracted evidence before processing real payslips.
+HOUSIA is a single-owner prototype, not a hosted multi-tenant service. Keep real applicant data
+out of the demo, protect the SQLite file and its backups, and use HTTPS with a strong secret and
+owner password before sharing applicant links. Applicant URLs act as private bearer links; avoid
+sharing or logging them. Define a data-retention policy before processing real applications.
